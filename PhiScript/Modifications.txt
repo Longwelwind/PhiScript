@@ -1,0 +1,9 @@
+﻿
+### GameManager.cs
+
+## Constructor
+System.Reflection.Assembly asm = System.Reflection.Assembly.LoadFile(System.IO.Path.GetFullPath("Planetbase_Data\\Managed\\PhiScript.dll"));
+asm.GetType("PhiScript.Phi").GetMethod("StaticLaunch").Invoke(null, null);
+
+# update()
+
