@@ -55,7 +55,7 @@ namespace PhiPatcher
              * We then load the Assembly-CSharp assembly that contains the
              * vanilla code
              * If it is the first use, we read Assembly-CSharp.dll, but if it is
-             * the second we read MovedAssemblyPath
+             * not we read Assembly-CSharp.original.dll
              */
             try
             {
