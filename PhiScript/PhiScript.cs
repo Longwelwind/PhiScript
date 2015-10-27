@@ -3,6 +3,7 @@ using Planetbase;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 namespace PhiScript
@@ -39,24 +40,26 @@ namespace PhiScript
             foreach (string modPath in modsPaths)
             {
                 Assembly asm = Assembly.LoadFile(modPath);
-                
+
                 // We're looking for the first class that inherits from Mod
-                foreach (Type type in asm.GetTypes())
+                Type modClass = asm.GetTypes().FirstOrDefault(type => type.IsAssignableFrom(typeof(Mod)));
+
+                if (modClass != null)
                 {
-                    if (type.IsAssignableFrom(typeof(Mod)))
-                    {
-                        Mod mod = (Mod) Activator.CreateInstance(type);
+                    Mod mod = (Mod)Activator.CreateInstance(modClass);
 
-                        mod.Init();
-
-                        this.Mods.Add(mod);
-                    }
+                    this.Mods.Add(mod);
                 }
-
-                foreach (Mod mod in this.Mods)
+                else
                 {
-                    mod.Init();
+                    // No Mod class was found for this .dll
+                    // Error display ?
                 }
+            }
+
+            foreach (Mod mod in this.Mods)
+            {
+                mod.Init();
             }
         }
        
