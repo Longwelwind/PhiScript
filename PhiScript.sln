@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhiScript", "PhiScript\PhiS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhiScriptExample", "PhiScriptExample\PhiScriptExample.csproj", "{3DA13ABB-3902-4425-BBD7-4FC6F554F993}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhiPatcher", "PhiPatcher\PhiPatcher.csproj", "{3B688544-8E74-4826-8898-A0749CA7456A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{3DA13ABB-3902-4425-BBD7-4FC6F554F993}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3DA13ABB-3902-4425-BBD7-4FC6F554F993}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3DA13ABB-3902-4425-BBD7-4FC6F554F993}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B688544-8E74-4826-8898-A0749CA7456A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B688544-8E74-4826-8898-A0749CA7456A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B688544-8E74-4826-8898-A0749CA7456A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B688544-8E74-4826-8898-A0749CA7456A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

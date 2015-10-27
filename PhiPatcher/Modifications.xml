@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Modifications>
+  <Class Name="GameManager">
+    <Method Name=".ctor">
+      <Instruction OpCode="Ret"/>
+    </Method>
+  </Class>
+</Modifications>
