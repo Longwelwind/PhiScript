@@ -11,10 +11,10 @@ namespace PhiScript.Event
     {
         public enum GuiType
         {
-            BaseManagement,
-            Build,
-            BuildInterior,
-            BuildExterior
+            BaseManagement = 1,
+            Build = 2,
+            BuildInterior = 3,
+            BuildExterior = 4
         }
 
         public GuiMenu GuiMenu
@@ -22,7 +22,10 @@ namespace PhiScript.Event
             get;
         }
 
-        public GuiType Type;
+        public GuiType Type
+        {
+            get;
+        }
 
         public EventGui(GuiMenu guiMenu, GuiType guiType)
         {

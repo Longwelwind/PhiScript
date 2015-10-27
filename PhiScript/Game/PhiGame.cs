@@ -28,11 +28,6 @@ namespace PhiScript.Game
             }
         }
 
-        public void OnTick()
-        {
-            this.TickEvent(this, new EventArgs());
-        }
-
         public List<ResourceType> GetResourceTypes()
         {
             return ResourceTypeList.get();
@@ -44,15 +39,25 @@ namespace PhiScript.Game
             MethodInfo method = resourceTypeList.GetType().GetMethod("addResource", BindingFlags.NonPublic | BindingFlags.Instance);
 
             method.Invoke(resourceTypeList, new object[] { resourceType });
-
-            Singleton<MessageLog>.getInstance().addMessage(new Message("Is the mode installed ??", TypeList<ModuleType, ModuleTypeList>.find<ModuleTypeLab>().getIcon(), 1));
-
-            this.GuiCreationEvent(this, new EventGui(null));
         }
 
         public void AddMessage(Message message)
         {
             Singleton<MessageLog>.getInstance().addMessage(message);
+        }
+
+        /**
+         * Those methods most be called from Assembly-CSharp at specific locations (refer to Modifications.txt)
+         */
+
+        public void OnTick()
+        {
+            this.TickEvent(this, new EventArgs());
+        }
+
+        public void OnGuiCreation(GuiMenu guiMenu, int guiTypeCode)
+        {
+            this.GuiCreationEvent(this, new EventGui(guiMenu, (EventGui.GuiType)guiTypeCode));
         }
 
     }
