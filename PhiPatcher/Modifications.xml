@@ -2,7 +2,14 @@
 <Modifications>
   <Class Name="GameManager">
     <Method Name=".ctor">
-      <Instruction OpCode="Ret"/>
+      <Instruction OpCode="Call" Module="PhiScript" Class="Phi" Method="StaticLaunch" />
+    </Method>
+  </Class>
+  <Class Name="AnotherClass">
+    <Method Name="AnotherMethod">
+      <Instruction OpCode="Ldarg_0" />
+      <Instruction OpCode="CallVirt" Module="CSharp-Assembly" Class="AnotherClass" Method="get_buildingMenu" />
+      <Instruction OpCode="Ret" />
     </Method>
   </Class>
 </Modifications>
