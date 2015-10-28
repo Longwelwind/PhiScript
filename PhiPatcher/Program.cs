@@ -134,61 +134,106 @@ namespace PhiPatcher
 
         public void PatchModifications()
         {
-            XmlNodeList modificationsList = this.ModificationsXml.ChildNodes;
-            /**
-             * We now inject the calls to the static methods
-             */
-            TypeDefinition type = this.CSharpModule.Types.FirstOrDefault(t => t.Name == "GameManager");
+            XmlNode modifsNode = this.ModificationsXml.SelectSingleNode("Modifications");
 
-            if (type == null)
+            foreach (XmlNode classNode in modifsNode.ChildNodes)
             {
-                Console.WriteLine("Couldn't find class " + "GameManager");
-                Console.Read();
-                return;
-            }
+                // We load the class in which the modifications will take place
+                string nameTypeToPatch = classNode.Attributes["Name"].Value;
+                TypeDefinition typeToPatch = this.CSharpModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
 
-            MethodDefinition method = type.Methods.FirstOrDefault(m => m.Name == ".ctor");
-
-            if (method == null)
-            {
-                Console.WriteLine("Couldn't find method " + type.Name + "." + ".ctor");
-                Console.Read();
-                return;
-            }
-
-            Mono.Cecil.Cil.MethodBody body = method.Body;
-            ILProcessor processor = method.Body.GetILProcessor();
-
-            InstructionEntry[] instructions = {
-               new InstructionEntry(OpCodes.Call, "StaticLaunch")
-            };
-
-            // We begin right before the "ret"
-            Instruction previousInstruction = body.Instructions.Last().Previous;
-            foreach (InstructionEntry instrTuple in instructions)
-            {
-                Instruction instruction = null;
-
-                if (instrTuple.OpCode == OpCodes.Call)
+                foreach (XmlNode methodNode in classNode.ChildNodes)
                 {
-                    MethodDefinition methodToAdd = this.PhiType.Methods.FirstOrDefault(m => m.Name == instrTuple.Arg);
+                    string nameMethodTopatch = methodNode.Attributes["Name"].Value;
+                    MethodDefinition methodToPatch = typeToPatch.Methods.FirstOrDefault(m => m.Name == nameMethodTopatch);
 
-                    MethodReference methodToAddImported = this.PhiAssembly.MainModule.Import(methodToAdd);
+                    ILProcessor processor = methodToPatch.Body.GetILProcessor();
 
-                    instruction = processor.Create(instrTuple.OpCode, methodToAddImported);
+                    // We begin to write the instructions before the "ret" instructions
+                    // i.e. before the last one
+                    Instruction prevInstr = methodToPatch.Body.Instructions.Last().Previous;
+                    foreach (XmlNode instrNode in methodNode.ChildNodes)
+                    {
+                        Instruction instr = this.ParseInstruction(processor, typeToPatch, instrNode);
+
+                        if (instr == null)
+                        {
+                            continue;
+                        }
+
+                        processor.InsertAfter(
+                            prevInstr,
+                            instr
+                        );
+
+                        prevInstr = instr;
+                    }
+                }
+            }
+        }
+
+        public Instruction ParseInstruction(ILProcessor processor, TypeDefinition type, XmlNode instrXml)
+        {
+            Instruction instr = null;
+
+            string nameOpCode = instrXml.Attributes["OpCode"].Value;
+
+            if (nameOpCode == "Call")
+            {
+                string assemblyName = instrXml.Attributes["Assembly"].Value;
+                string classToAddName = instrXml.Attributes["Class"].Value;
+                string methodToAddName = instrXml.Attributes["Method"].Value;
+
+                ModuleDefinition module = null;
+
+                // We search in which assembly should we pull the method
+                if (assemblyName == "CSharp-Assembly")
+                {
+                    module = this.CSharpAssembly.MainModule;
+                }
+                else if (assemblyName == "PhiScript")
+                {
+                    module = this.PhiAssembly.MainModule;
                 }
                 else
                 {
-
+                    // Error handling
                 }
 
-                processor.InsertAfter(
-                    previousInstruction,
-                    instruction
-                );
+                TypeDefinition typeToAdd = module.Types.FirstOrDefault(t => t.Name == classToAddName);
+                MethodDefinition methodToAdd = typeToAdd.Methods.FirstOrDefault(m => m.Name == methodToAddName);
 
-                previousInstruction = instruction;
+                MethodReference methodToAddImported = this.CSharpAssembly.MainModule.Import(methodToAdd);
+
+                instr = processor.Create(OpCodes.Call, methodToAddImported);
             }
+            else if (nameOpCode == "Ldc.I4")
+            {
+                int value = Int32.Parse(instrXml.Attributes["Value"].Value);
+                instr = processor.Create(OpCodes.Ldc_I4, value);
+            }
+            else if (nameOpCode == "Ldfld")
+            {
+                string fieldName = instrXml.Attributes["Field"].Value;
+                FieldDefinition field = type.Fields.FirstOrDefault(f => f.Name == fieldName);
+
+                if (field == null)
+                {
+                    Console.WriteLine("Couldn't find field named " + field);
+                }
+
+                instr = processor.Create(OpCodes.Ldfld, field);
+            }
+            else if (nameOpCode == "Ldarg_0")
+            {
+                instr = processor.Create(OpCodes.Ldarg_0);
+            }
+            else
+            {
+                Console.WriteLine("Couldn't find OpCode named " + nameOpCode);
+            }
+
+            return instr;
         }
 
         public XmlDocument LoadModifications(string path)

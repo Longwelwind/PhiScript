@@ -9,11 +9,8 @@ namespace PhiScript
 {
     public class Phi
     {
-        public static Phi Instance
-        {
-            get;
-            set;
-        }
+        public static Phi Instance;
+        
 
         public PhiGame PhiGame {
             get;
@@ -38,10 +35,11 @@ namespace PhiScript
 
             foreach (string modPath in modsPaths)
             {
+                Console.WriteLine(modPath);
                 Assembly asm = Assembly.LoadFile(modPath);
 
                 // We're looking for the first class that inherits from Mod
-                Type modClass = asm.GetTypes().FirstOrDefault(type => type.IsAssignableFrom(typeof(Mod)));
+                Type modClass = asm.GetTypes().FirstOrDefault(type => type.IsSubclassOf(typeof(Mod)));
 
                 if (modClass != null)
                 {

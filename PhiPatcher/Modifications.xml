@@ -2,14 +2,18 @@
 <Modifications>
   <Class Name="GameManager">
     <Method Name=".ctor">
-      <Instruction OpCode="Call" Module="PhiScript" Class="Phi" Method="StaticLaunch" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="StaticLaunch" />
+    </Method>
+    <Method Name="update">
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="PhiGame" Method="OnTick" />
     </Method>
   </Class>
-  <Class Name="AnotherClass">
-    <Method Name="AnotherMethod">
+  <Class Name="GuiMenuSystem">
+    <Method Name="init">
       <Instruction OpCode="Ldarg_0" />
-      <Instruction OpCode="CallVirt" Module="CSharp-Assembly" Class="AnotherClass" Method="get_buildingMenu" />
-      <Instruction OpCode="Ret" />
+      <Instruction OpCode="Ldfld" Field="mMenuBuildExterior" />
+      <Instruction OpCode="Ldc.I4" Value="4" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="PhiGame" Method="OnGuiCreation" />
     </Method>
   </Class>
 </Modifications>

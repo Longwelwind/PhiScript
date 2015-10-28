@@ -3,6 +3,7 @@ using PhiScript.Event;
 using PhiScript.Game;
 using Planetbase;
 using System;
+using System.IO;
 
 namespace PhiScriptExample
 {
@@ -10,20 +11,19 @@ namespace PhiScriptExample
     {
         public override void Init()
         {
-            PhiGame.Instance.GuiCreationEvent += this.OnGuiCreation;
-            PhiGame.Instance.TickEvent += this.OnTick;
+            PhiGame.Instance.GuiCreationEvent += new EventHandler<EventGui>(this.OnGuiCreation);
         }
 
-        public void OnTick(object sender, EventArgs e)
+        public void OnButtonClick(object sender)
         {
-            Phi.Instance.PhiGame.AddMessage(new Message("Test", TypeList<ModuleType, ModuleTypeList>.find<ModuleTypeLab>().getIcon(), 1));
+            
         }
 
         public void OnGuiCreation(object sender, EventGui e)
         {
-            if (e.Type == EventGui.GuiType.BaseManagement)
+            if (e.Type == EventGui.GuiType.BuildExterior)
             {
-                e.GuiMenu.addItem(new GuiMenuItem(ResourceList.getInstance().Icons.Camera, "Test button", null));
+                e.GuiMenu.addItem(new GuiMenuItem(ResourceList.getInstance().Icons.BuildExterior, "Test button", new GuiDefinitions.Callback(this.OnButtonClick)));
             }
         }
     }

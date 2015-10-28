@@ -8,21 +8,18 @@ namespace PhiScript.Game
 {
     public class PhiGame
     {
-        public static PhiGame Instance
-        {
-            get;
-            set;
-        }
-
+        public static PhiGame _instance;
+        public static PhiGame Instance;
+        
         public event EventHandler TickEvent;
         public event EventHandler<EventGui> GuiCreationEvent;
 
         public PhiGame()
         {
-            if (PhiGame.Instance != null)
-            {
+            if (PhiGame.Instance == null)
                 PhiGame.Instance = this;
-            }
+            else
+                throw new Exception("PhiGame instanced twice");
         }
 
         public List<ResourceType> GetResourceTypes()
@@ -46,15 +43,16 @@ namespace PhiScript.Game
         /**
          * Those methods most be called from Assembly-CSharp at specific locations (refer to Modifications.txt)
          */
-
-        public void OnTick()
+        public static void OnTick()
         {
-            this.TickEvent(this, new EventArgs());
+            if (PhiGame.Instance.TickEvent != null)
+                PhiGame.Instance.TickEvent(PhiGame.Instance, new EventArgs());
         }
 
-        public void OnGuiCreation(GuiMenu guiMenu, int guiTypeCode)
+        public static void OnGuiCreation(GuiMenu guiMenu, int guiTypeCode)
         {
-            this.GuiCreationEvent(this, new EventGui(guiMenu, (EventGui.GuiType)guiTypeCode));
+            if (PhiGame.Instance.GuiCreationEvent != null)
+                PhiGame.Instance.GuiCreationEvent(PhiGame.Instance, new EventGui(guiMenu, (EventGui.GuiType) guiTypeCode));
         }
 
     }
