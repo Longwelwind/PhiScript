@@ -2,54 +2,102 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.IO;
+using System.Xml;
+using System.Reflection;
 
 namespace PhiPatcher
 {
     class Program
     {
-        private static string AssemblyPath = "Assembly-CSharp.dll";
-        private static string MovedAssemblyPath = "Assembly-CSharp.original.dll";
-        private static string PhiAssemblyPath = "PhiScript.dll";
+        private string ModificationsXmlPath = "PhiPatcher.Modifications.xml";
 
-        static void Main(string[] args)
+        private string AssemblyPath = "Assembly-CSharp.dll";
+        private string MovedAssemblyPath = "Assembly-CSharp.original.dll";
+        private string PhiAssemblyPath = "PhiScript.dll";
+
+        private Boolean AlreadyPatched = false;
+
+        private XmlDocument ModificationsXml;
+
+        private AssemblyDefinition CSharpAssembly;
+        private ModuleDefinition CSharpModule;
+
+        private AssemblyDefinition PhiAssembly;
+        private TypeDefinition PhiType;
+
+        public Program()
         {
-            AssemblyDefinition assembly = null;
-            AssemblyDefinition phiAssembly = null;
-            Boolean alreadyUsed = File.Exists(Program.MovedAssemblyPath);
 
-            if (alreadyUsed)
+        }
+
+        public void Run()
+        {
+            /**
+             * We check if the assembly has already been patched
+             */
+            this.AlreadyPatched = File.Exists(this.MovedAssemblyPath);
+
+            if (this.AlreadyPatched)
             {
-                Console.WriteLine(Program.MovedAssemblyPath + " already present");
-                Console.WriteLine("Using the backed-up " + Program.MovedAssemblyPath);
+                Console.WriteLine(this.MovedAssemblyPath + " already present");
+                Console.WriteLine("Using the backed-up " + this.MovedAssemblyPath);
             }
 
+            /**
+             * We launch the patching
+             */
+            this.ModificationsXml = this.LoadModifications(this.ModificationsXmlPath);
+
+            this.LoadAssemblies();
+            this.PatchModifications();
+
+            /**
+             * We save or rename everything
+             */
+            // We rename the original dll
+            if (!this.AlreadyPatched)
+            {
+                System.IO.File.Move(this.AssemblyPath, this.MovedAssemblyPath);
+            }
+
+            Console.WriteLine("Writing the new Assembly in " + this.AssemblyPath);
+
+            this.CSharpAssembly.Write(this.AssemblyPath);
+
+            Console.WriteLine("Finished Writing");
+
+            Console.WriteLine("Enter to continue");
+            Console.Read();
+        }
+
+        public void LoadAssemblies()
+        {
             /**
              * We first load the PhiScript assembly containing the static
              * methods that must be called
              */
             try
             {
-                phiAssembly = AssemblyDefinition.ReadAssembly(Program.PhiAssemblyPath);
+                this.PhiAssembly = AssemblyDefinition.ReadAssembly(this.PhiAssemblyPath);
             }
             catch (FileNotFoundException e)
             {
-                Console.WriteLine("Can't find file " + Program.PhiAssemblyPath);
+                Console.WriteLine("Can't find file " + this.PhiAssemblyPath);
                 Console.Read();
                 return;
             }
             catch
             {
-                Console.WriteLine("Couldn't load " + Program.PhiAssemblyPath);
+                Console.WriteLine("Couldn't load " + this.PhiAssemblyPath);
                 Console.Read();
                 return;
             }
 
-            ModuleDefinition phiModule = phiAssembly.MainModule;
-            TypeDefinition phiType = phiModule.GetType("PhiScript.Phi");
+            ModuleDefinition phiModule = this.PhiAssembly.MainModule;
+            this.PhiType = phiModule.GetType("PhiScript.Phi");
 
             /**
              * We then load the Assembly-CSharp assembly that contains the
@@ -59,34 +107,38 @@ namespace PhiPatcher
              */
             try
             {
-                if (alreadyUsed)
+                if (this.AlreadyPatched)
                 {
-                    assembly = AssemblyDefinition.ReadAssembly(Program.MovedAssemblyPath);
+                    this.CSharpAssembly = AssemblyDefinition.ReadAssembly(this.MovedAssemblyPath);
                 }
                 else
                 {
-                    assembly = AssemblyDefinition.ReadAssembly(Program.AssemblyPath);
+                    this.CSharpAssembly = AssemblyDefinition.ReadAssembly(this.AssemblyPath);
                 }
             }
             catch (FileNotFoundException e)
             {
-                Console.WriteLine("Can't find file " + Program.AssemblyPath);
+                Console.WriteLine("Can't find file " + this.AssemblyPath);
                 Console.Read();
                 return;
             }
             catch
             {
-                Console.WriteLine("Couldn't load " + Program.AssemblyPath);
+                Console.WriteLine("Couldn't load " + this.AssemblyPath);
                 Console.Read();
                 return;
             }
 
-            ModuleDefinition module = assembly.MainModule;
+            this.CSharpModule = this.CSharpAssembly.MainModule;
+        }
 
+        public void PatchModifications()
+        {
+            XmlNodeList modificationsList = this.ModificationsXml.ChildNodes;
             /**
              * We now inject the calls to the static methods
              */
-            TypeDefinition type = assembly.MainModule.Types.FirstOrDefault(t => t.Name == "GameManager" );
+            TypeDefinition type = this.CSharpModule.Types.FirstOrDefault(t => t.Name == "GameManager");
 
             if (type == null)
             {
@@ -104,31 +156,30 @@ namespace PhiPatcher
                 return;
             }
 
-            MethodBody body = method.Body;
+            Mono.Cecil.Cil.MethodBody body = method.Body;
             ILProcessor processor = method.Body.GetILProcessor();
 
-            Tuple<OpCode, string>[] instructions = {
-               new Tuple<OpCode, string>(OpCodes.Call, "StaticLaunch")
+            InstructionEntry[] instructions = {
+               new InstructionEntry(OpCodes.Call, "StaticLaunch")
             };
 
             // We begin right before the "ret"
             Instruction previousInstruction = body.Instructions.Last().Previous;
-            foreach (Tuple<OpCode, string> instrTuple in instructions)
+            foreach (InstructionEntry instrTuple in instructions)
             {
                 Instruction instruction = null;
 
-                if (instrTuple.Item1 == OpCodes.Call)
+                if (instrTuple.OpCode == OpCodes.Call)
                 {
-                    MethodDefinition methodToAdd = phiType.Methods.FirstOrDefault(m => m.Name == instrTuple.Item2);
-                    
-                    MethodReference methodToAddImported = module.Import(methodToAdd);
+                    MethodDefinition methodToAdd = this.PhiType.Methods.FirstOrDefault(m => m.Name == instrTuple.Arg);
 
-                    instruction = processor.Create(instrTuple.Item1, methodToAddImported);
+                    MethodReference methodToAddImported = this.PhiAssembly.MainModule.Import(methodToAdd);
 
+                    instruction = processor.Create(instrTuple.OpCode, methodToAddImported);
                 }
                 else
                 {
-                    
+
                 }
 
                 processor.InsertAfter(
@@ -138,24 +189,47 @@ namespace PhiPatcher
 
                 previousInstruction = instruction;
             }
+        }
 
+        public XmlDocument LoadModifications(string path)
+        {
             /**
-             * We save or rename everything
+             * We load the file containing the modifications to patch
+             * in the assembly
              */
-            // We rename the original dll
-            if (!alreadyUsed)
-            {
-                System.IO.File.Move(Program.AssemblyPath, Program.MovedAssemblyPath);
-            }
+            var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(path);
+            StreamReader reader = new StreamReader(stream);
 
-            Console.WriteLine("Writing the new Assembly in " + Program.AssemblyPath);
+            XmlDocument modif = new XmlDocument();
+            modif.LoadXml(reader.ReadToEnd());
 
-            assembly.Write(Program.AssemblyPath);
+            return modif;
+        }
 
-            Console.WriteLine("Finished Writing");
+        static void Main(string[] args)
+        {
+            Program program = new Program();
 
-            Console.WriteLine("Enter to continue");
-            Console.Read();
+            program.Run();
+        }
+    }
+
+    public class InstructionEntry
+    {
+        public OpCode OpCode
+        {
+            get;
+        }
+
+        public string Arg
+        {
+            get;
+        }
+
+        public InstructionEntry(OpCode opCode, string arg)
+        {
+            this.OpCode = opCode;
+            this.Arg = arg;
         }
     }
 }
