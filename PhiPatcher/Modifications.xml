@@ -5,7 +5,7 @@
       <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="StaticLaunch" />
     </Method>
     <Method Name="update">
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="PhiGame" Method="OnTick" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnTick" />
     </Method>
   </Class>
   <Class Name="GuiMenuSystem">
@@ -13,22 +13,22 @@
       <Instruction OpCode="Ldarg_0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuild" />
       <Instruction OpCode="Ldc.I4" Value="2" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="PhiGame" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnGuiCreation" />
     
       <Instruction OpCode="Ldarg_0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuildExterior" />
       <Instruction OpCode="Ldc.I4" Value="4" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="PhiGame" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnGuiCreation" />
     
       <Instruction OpCode="Ldarg_0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuildInterior" />
       <Instruction OpCode="Ldc.I4" Value="3" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="PhiGame" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnGuiCreation" />
     
       <Instruction OpCode="Ldarg_0" />
       <Instruction OpCode="Ldfld" Field="mMenuSpeed" />
       <Instruction OpCode="Ldc.I4" Value="5" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="PhiGame" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnGuiCreation" />
     </Method>
   </Class>
 </Modifications>

@@ -142,10 +142,22 @@ namespace PhiPatcher
                 string nameTypeToPatch = classNode.Attributes["Name"].Value;
                 TypeDefinition typeToPatch = this.CSharpModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
 
+                if (typeToPatch == null)
+                {
+                    Console.WriteLine("Couldn't find type/class named" + nameTypeToPatch);
+                    continue;
+                }
+
                 foreach (XmlNode methodNode in classNode.ChildNodes)
                 {
                     string nameMethodTopatch = methodNode.Attributes["Name"].Value;
                     MethodDefinition methodToPatch = typeToPatch.Methods.FirstOrDefault(m => m.Name == nameMethodTopatch);
+
+                    if (methodToPatch == null)
+                    {
+                        Console.WriteLine("Couldn't find method named" + methodToPatch);
+                        continue;
+                    }
 
                     ILProcessor processor = methodToPatch.Body.GetILProcessor();
 
@@ -198,10 +210,25 @@ namespace PhiPatcher
                 else
                 {
                     // Error handling
+                    Console.WriteLine("Couldn't find assembly named " + assemblyName);
+                    return null;
                 }
 
                 TypeDefinition typeToAdd = module.Types.FirstOrDefault(t => t.Name == classToAddName);
+
+                if (typeToAdd == null)
+                {
+                    Console.WriteLine("Couldn't find type/class named " + classToAddName);
+                    return null;
+                }
+
                 MethodDefinition methodToAdd = typeToAdd.Methods.FirstOrDefault(m => m.Name == methodToAddName);
+
+                if (methodToAdd == null)
+                {
+                    Console.WriteLine("Couldn't find method named " + methodToAddName);
+                    return null;
+                }
 
                 MethodReference methodToAddImported = this.CSharpAssembly.MainModule.Import(methodToAdd);
 
