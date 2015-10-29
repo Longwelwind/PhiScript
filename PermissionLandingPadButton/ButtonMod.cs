@@ -44,10 +44,5 @@ namespace PermissionLandingPadButton
                 }
             }
         }
-
-        public void OnButtonClick(object sender)
-        {
-
-        }
     }
 }
