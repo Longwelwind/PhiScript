@@ -11,7 +11,8 @@ namespace PhiScript.Event
             Build = 2,
             BuildInterior = 3,
             BuildExterior = 4,
-            Speed = 5
+            Speed = 5,
+            Action = 6
         }
 
         public GuiMenu GuiMenu

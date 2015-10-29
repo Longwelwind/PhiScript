@@ -30,5 +30,11 @@
       <Instruction OpCode="Ldc.I4" Value="5" />
       <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnGuiCreation" />
     </Method>
+    <Method Name="setActionMenu">
+      <Instruction OpCode="Ldarg_0" />
+      <Instruction OpCode="Ldfld" Field="mMenuAction" />
+      <Instruction OpCode="Ldc.I4" Value="6" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnGuiCreation" />
+    </Method>
   </Class>
 </Modifications>
