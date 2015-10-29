@@ -12,7 +12,7 @@ namespace PhiScript
     {
         public static Phi Instance;
 
-        private List<Mod> Mods = new List<Mod>();
+        public List<Mod> Mods = new List<Mod>();
 
         /// <summary>
         /// Raised the game processes a tick, even outside of the game (i.e. in menu).
@@ -28,22 +28,27 @@ namespace PhiScript
         /// Returns the currently selected object (human, module, ...)
         /// </summary>
         /// <returns></returns>
-        public Selectable getSelection()
+        public Selectable GetSelection()
         {
-            return Phi.getPrivateStaticField<Selectable>(typeof(Selection), "mSelected");
+            return Phi.GetPrivateStaticField<Selectable>(typeof(Selection), "mSelected");
         }
 
-        public ModuleType getModuleType(Planetbase.Module module)
+        public ModuleType GetModuleType(Planetbase.Module module)
         {
-            return Phi.getPrivateField<ModuleType>(module, "mModuleType");
+            return Phi.GetPrivateField<ModuleType>(module, "mModuleType");
         }
 
-        public static T getPrivateField<T>(object obj, string field)
+        public GameManager GetGameManager()
+        {
+            return Phi.GetPrivateStaticField<GameManager>(typeof(GameManager), "mInstance");
+        }
+
+        public static T GetPrivateField<T>(object obj, string field)
         {
             return (T) obj.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj);
         }
 
-        public static T getPrivateStaticField<T>(Type type, string field)
+        public static T GetPrivateStaticField<T>(Type type, string field)
         {
             return (T) type.GetField(field, BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
         }
