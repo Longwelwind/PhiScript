@@ -30,21 +30,20 @@ namespace PhiScript
         /// <returns></returns>
         public Selectable getSelection()
         {
-            return this.getPrivateStaticField<Selectable>(typeof(Selection), "mSelected");
+            return Phi.getPrivateStaticField<Selectable>(typeof(Selection), "mSelected");
         }
 
         public ModuleType getModuleType(Planetbase.Module module)
         {
-            return this.getPrivateField<ModuleType>(module, "mModuleType");
+            return Phi.getPrivateField<ModuleType>(module, "mModuleType");
         }
 
-        private T getPrivateField<T>(object obj, string field)
+        public static T getPrivateField<T>(object obj, string field)
         {
-
             return (T) obj.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj);
         }
 
-        private T getPrivateStaticField<T>(Type type, string field)
+        public static T getPrivateStaticField<T>(Type type, string field)
         {
             return (T) type.GetField(field, BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
         }
