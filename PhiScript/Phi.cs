@@ -14,7 +14,14 @@ namespace PhiScript
 
         private List<Mod> Mods = new List<Mod>();
 
+        /// <summary>
+        /// Raised the game processes a tick, even outside of the game (i.e. in menu).
+        /// </summary>
         public event EventHandler TickEvent;
+
+        /// <summary>
+        /// Raised when the game creates a GuiMenu.
+        /// </summary>
         public event EventHandler<EventGui> GuiCreationEvent;
 
         public List<ResourceType> GetResourceTypes()
