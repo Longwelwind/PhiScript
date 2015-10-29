@@ -1,9 +1,7 @@
 ﻿using PhiScript;
 using PhiScript.Event;
-using PhiScript.Game;
 using Planetbase;
 using System;
-using System.IO;
 
 namespace PhiScriptExample
 {
@@ -11,7 +9,7 @@ namespace PhiScriptExample
     {
         public override void Init()
         {
-            PhiGame.Instance.GuiCreationEvent += new EventHandler<EventGui>(this.OnGuiCreation);
+            Phi.Instance.GuiCreationEvent += new EventHandler<EventGui>(this.OnGuiCreation);
         }
 
         public void OnButtonClick(object sender)

@@ -1,4 +1,5 @@
-﻿using PhiScript.Game;
+﻿using PhiScript.Event;
+using Planetbase;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,17 +11,28 @@ namespace PhiScript
     public class Phi
     {
         public static Phi Instance;
-        
-
-        public PhiGame PhiGame {
-            get;
-        }
 
         private List<Mod> Mods = new List<Mod>();
 
-        public Phi()
+        public event EventHandler TickEvent;
+        public event EventHandler<EventGui> GuiCreationEvent;
+
+        public List<ResourceType> GetResourceTypes()
         {
-            this.PhiGame = new PhiGame();
+            return ResourceTypeList.get();
+        }
+
+        public void AddResourceType(ResourceType resourceType)
+        {
+            ResourceTypeList resourceTypeList = ResourceTypeList.getInstance();
+            MethodInfo method = resourceTypeList.GetType().GetMethod("addResource", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            method.Invoke(resourceTypeList, new object[] { resourceType });
+        }
+
+        public void AddMessage(Message message)
+        {
+            Singleton<MessageLog>.getInstance().addMessage(message);
         }
 
         public void Launch()
@@ -35,7 +47,7 @@ namespace PhiScript
 
             foreach (string modPath in modsPaths)
             {
-                Console.WriteLine(modPath);
+                System.Console.WriteLine(modPath);
                 Assembly asm = Assembly.LoadFile(modPath);
 
                 // We're looking for the first class that inherits from Mod
@@ -59,7 +71,22 @@ namespace PhiScript
                 mod.Init();
             }
         }
-       
+
+        /**
+         * Those methods must be called from Assembly-CSharp at specific locations (refer to the PhiPatcher solution)
+         */
+        public static void OnTick()
+        {
+            if (Phi.Instance.TickEvent != null)
+                Phi.Instance.TickEvent(Phi.Instance, new EventArgs());
+        }
+
+        public static void OnGuiCreation(GuiMenu guiMenu, int guiTypeCode)
+        {
+            if (Phi.Instance.GuiCreationEvent != null)
+                Phi.Instance.GuiCreationEvent(Phi.Instance, new EventGui(guiMenu, (EventGui.GuiType)guiTypeCode));
+        }
+
         public static void StaticLaunch()
         {
             Phi.Instance = new Phi();

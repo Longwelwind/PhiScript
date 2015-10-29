@@ -33,7 +33,6 @@
   <ItemGroup>
     <Compile Include="Event\Event.cs" />
     <Compile Include="Event\EventGui.cs" />
-    <Compile Include="Game\PhiGame.cs" />
     <Compile Include="Phi.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
