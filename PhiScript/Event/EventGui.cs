@@ -10,7 +10,8 @@ namespace PhiScript.Event
             BaseManagement = 1,
             Build = 2,
             BuildInterior = 3,
-            BuildExterior = 4
+            BuildExterior = 4,
+            Speed = 5
         }
 
         public GuiMenu GuiMenu
