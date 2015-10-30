@@ -13,28 +13,33 @@
       <Instruction OpCode="Ldarg_0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuild" />
       <Instruction OpCode="Ldc.I4" Value="2" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     
       <Instruction OpCode="Ldarg_0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuildExterior" />
       <Instruction OpCode="Ldc.I4" Value="4" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     
       <Instruction OpCode="Ldarg_0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuildInterior" />
       <Instruction OpCode="Ldc.I4" Value="3" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     
       <Instruction OpCode="Ldarg_0" />
       <Instruction OpCode="Ldfld" Field="mMenuSpeed" />
       <Instruction OpCode="Ldc.I4" Value="5" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     </Method>
     <Method Name="setActionMenu">
       <Instruction OpCode="Ldarg_0" />
       <Instruction OpCode="Ldfld" Field="mMenuAction" />
       <Instruction OpCode="Ldc.I4" Value="6" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
+    </Method>
+  </Class>
+  <Class Name="LandingShipManager">
+    <Method Name="tick" Location="93" DeleteCount="1">
+      <Instruction OpCode="Ldc.I4" Value="161803" />
     </Method>
   </Class>
 </Modifications>

@@ -33,6 +33,8 @@
   <ItemGroup>
     <Compile Include="Event\Event.cs" />
     <Compile Include="Event\EventGui.cs" />
+    <Compile Include="Manager\GuiManager.cs" />
+    <Compile Include="Manager\ModuleManager.cs" />
     <Compile Include="Phi.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -45,7 +47,9 @@
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Planetbase\Planetbase_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
     </Reference>
+    <Reference Include="System" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

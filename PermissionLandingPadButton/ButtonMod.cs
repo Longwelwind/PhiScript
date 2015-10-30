@@ -12,7 +12,7 @@ namespace PermissionLandingPadButton
     {
         public override void Init()
         {
-            Phi.Instance.GuiCreationEvent += this.OnGuiCreation;
+            Phi.Instance.GuiManager.GuiCreationEvent += this.OnGuiCreation;
         }
 
         public void OnGuiCreation(object sender, EventGui e)
@@ -24,7 +24,7 @@ namespace PermissionLandingPadButton
                 if (selected is Module)
                 {
                     Module module = (Module) selected;
-                    if (Phi.Instance.GetModuleType(module) is ModuleTypeLandingPad)
+                    if (Phi.Instance.ModuleManager.GetModuleType(module) is ModuleTypeLandingPad)
                     {
                         // The player has selected a Landing Pad, we add the button !
                         // First, we need to retrieve the callback that opens

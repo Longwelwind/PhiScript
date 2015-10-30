@@ -79,25 +79,28 @@ namespace PhiPatcher
              * We first load the PhiScript assembly containing the static
              * methods that must be called
              */
-            try
+            if (File.Exists(this.PhiAssemblyPath))
             {
-                this.PhiAssembly = AssemblyDefinition.ReadAssembly(this.PhiAssemblyPath);
-            }
-            catch (FileNotFoundException e)
-            {
-                Console.WriteLine("Can't find file " + this.PhiAssemblyPath);
-                Console.Read();
-                return;
-            }
-            catch
-            {
-                Console.WriteLine("Couldn't load " + this.PhiAssemblyPath);
-                Console.Read();
-                return;
-            }
+                try
+                {
+                    this.PhiAssembly = AssemblyDefinition.ReadAssembly(this.PhiAssemblyPath);
+                }
+                catch (FileNotFoundException e)
+                {
+                    Console.WriteLine("Can't find file " + this.PhiAssemblyPath);
+                    Console.Read();
+                    return;
+                }
+                catch
+                {
+                    Console.WriteLine("Couldn't load " + this.PhiAssemblyPath);
+                    Console.Read();
+                    return;
+                }
 
-            ModuleDefinition phiModule = this.PhiAssembly.MainModule;
-            this.PhiType = phiModule.GetType("PhiScript.Phi");
+                ModuleDefinition phiModule = this.PhiAssembly.MainModule;
+                this.PhiType = phiModule.GetType("PhiScript.Phi");
+            }
 
             /**
              * We then load the Assembly-CSharp assembly that contains the
@@ -161,9 +164,30 @@ namespace PhiPatcher
 
                     ILProcessor processor = methodToPatch.Body.GetILProcessor();
 
-                    // We begin to write the instructions before the "ret" instructions
-                    // i.e. before the last one
-                    Instruction prevInstr = methodToPatch.Body.Instructions.Last().Previous;
+                    // By default, we place the modification just before the "ret" instruction
+                    // (i.e. before the last instruction)
+                    int indexBegin = methodToPatch.Body.Instructions.Count - 1;
+
+                    // If the user specified a location, we begin there
+                    if (methodNode.Attributes["Location"] != null)
+                    {
+                        indexBegin = Int32.Parse(methodNode.Attributes["Location"].Value);
+                    }
+
+                    // If the user specified a count of instructions to delete,
+                    // we delete them
+                    if (methodNode.Attributes["DeleteCount"] != null)
+                    {
+                        int countInstrToDelete = Int32.Parse(methodNode.Attributes["DeleteCount"].Value);
+
+                        for (int i = 0;i < countInstrToDelete;i++)
+                        {
+                            processor.Remove(methodToPatch.Body.Instructions.ElementAt(indexBegin));
+                        }
+                    }
+
+                    Instruction prevInstr = methodToPatch.Body.Instructions.ElementAt(indexBegin).Previous;
+
                     foreach (XmlNode instrNode in methodNode.ChildNodes)
                     {
                         Instruction instr = this.ParseInstruction(processor, typeToPatch, instrNode);

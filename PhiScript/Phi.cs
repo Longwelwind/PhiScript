@@ -1,4 +1,5 @@
 ﻿using PhiScript.Event;
+using PhiScript.Manager;
 using Planetbase;
 using System;
 using System.Collections.Generic;
@@ -13,16 +14,19 @@ namespace PhiScript
         public static Phi Instance;
 
         public List<Mod> Mods = new List<Mod>();
+        public GuiManager GuiManager;
+        public ModuleManager ModuleManager;
 
         /// <summary>
         /// Raised the game processes a tick, even outside of the game (i.e. in menu).
         /// </summary>
         public event EventHandler TickEvent;
 
-        /// <summary>
-        /// Raised when the game creates a GuiMenu.
-        /// </summary>
-        public event EventHandler<EventGui> GuiCreationEvent;
+        public Phi()
+        {
+            this.GuiManager = new GuiManager();
+            this.ModuleManager = new ModuleManager();
+        }
 
         /// <summary>
         /// Returns the currently selected object (human, module, ...)
@@ -31,11 +35,6 @@ namespace PhiScript
         public Selectable GetSelection()
         {
             return Phi.GetPrivateStaticField<Selectable>(typeof(Selection), "mSelected");
-        }
-
-        public ModuleType GetModuleType(Planetbase.Module module)
-        {
-            return Phi.GetPrivateField<ModuleType>(module, "mModuleType");
         }
 
         public GameManager GetGameManager()
@@ -66,14 +65,9 @@ namespace PhiScript
             method.Invoke(resourceTypeList, new object[] { resourceType });
         }
 
-        public void AddMessage(Message message)
-        {
-            Singleton<MessageLog>.getInstance().addMessage(message);
-        }
-
         public void Launch()
         {
-            var modsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\Planetbase\\ModsPhiScript";
+            var modsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\Planetbase\\PhiMods";
             if (!Directory.Exists(modsFolder))
             {
                 Directory.CreateDirectory(modsFolder);
@@ -115,12 +109,6 @@ namespace PhiScript
         {
             if (Phi.Instance.TickEvent != null)
                 Phi.Instance.TickEvent(Phi.Instance, new EventArgs());
-        }
-
-        public static void OnGuiCreation(GuiMenu guiMenu, int guiTypeCode)
-        {
-            if (Phi.Instance.GuiCreationEvent != null)
-                Phi.Instance.GuiCreationEvent(Phi.Instance, new EventGui(guiMenu, (EventGui.GuiType)guiTypeCode));
         }
 
         public static void StaticLaunch()

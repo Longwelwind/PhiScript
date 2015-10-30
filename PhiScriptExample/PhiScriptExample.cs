@@ -9,7 +9,7 @@ namespace PhiScriptExample
     {
         public override void Init()
         {
-            Phi.Instance.GuiCreationEvent += new EventHandler<EventGui>(this.OnGuiCreation);
+            Phi.Instance.GuiManager.GuiCreationEvent += new EventHandler<EventGui>(this.OnGuiCreation);
         }
 
         public void OnButtonClick(object sender)
