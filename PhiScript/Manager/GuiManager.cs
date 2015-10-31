@@ -14,7 +14,6 @@ namespace PhiScript.Manager
         /**
          * Those methods must be called from Assembly-CSharp at specific locations (refer to the PhiPatcher solution)
          */
-
         public void AddMessage(Message message)
         {
             Singleton<MessageLog>.getInstance().addMessage(message);

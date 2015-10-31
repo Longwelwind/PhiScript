@@ -12,5 +12,13 @@ namespace PhiScript.Manager
         {
             return Phi.GetPrivateField<ModuleType>(module, "mModuleType");
         }
+
+        /**
+         * Those methods must be called from Assembly-CSharp at specific locations (refer to the PhiPatcher solution)
+         */
+        public static void OnModuleBuild(Module module)
+        {
+
+        }
     }
 }
