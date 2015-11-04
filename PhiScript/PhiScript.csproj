@@ -17,10 +17,11 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\..\..\Program Files %28x86%29\Steam\steamapps\common\Planetbase\Planetbase_Data\Managed\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -29,10 +30,14 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Event\Event.cs" />
+    <Compile Include="Event\ConstructionComponent\CanProduceEvent.cs" />
+    <Compile Include="Event\ConstructionComponent\CompleteProductionEvent.cs" />
+    <Compile Include="Event\ConstructionComponent\NeededResourcesEvent.cs" />
     <Compile Include="Event\EventGui.cs" />
+    <Compile Include="Manager\ConstructionComponentManager.cs" />
     <Compile Include="Manager\GuiManager.cs" />
     <Compile Include="Manager\ModuleManager.cs" />
     <Compile Include="Phi.cs" />
@@ -46,7 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Planetbase\Planetbase_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\Planetbase - Copy\Planetbase_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />

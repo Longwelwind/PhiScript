@@ -37,6 +37,36 @@
       <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     </Method>
   </Class>
+  <Class Name="ConstructionComponent">
+    <Method Name="canProduce" Location="0" TempVariable="System.Nullable`1[[System.Boolean, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+      <Instruction OpCode="Ldarg_0" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="ConstructionComponentManager" Method="OnCanProduce" />
+      <Instruction OpCode="Stloc_S" Value="8" />
+      <Instruction OpCode="Ldloc_S" Value="8" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="HasValue" />
+      <Instruction OpCode="Brfalse_S" />
+      <Instruction OpCode="Ldloc_S" Value="8" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="GetValue" />
+      <Instruction OpCode="Ret" />
+    </Method>
+    <Method Name="completeProduction" Location="0">
+      <Instruction OpCode="Ldarg_0" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="ConstructionComponentManager" Method="OnCompleteProduction" />
+      <Instruction OpCode="Brfalse_S" />
+      <Instruction OpCode="Ret" />
+    </Method>
+    <Method Name="getNeededResources" Location="0" TempVariable="System.Collections.Generic.List`1[[Planetbase.ResourceType, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+      <Instruction OpCode="Ldarg_0" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Class="ConstructionComponentManager" Method="OnNeededResources" />
+      <Instruction OpCode="Stloc_S" Value="4" />
+      <Instruction OpCode="Ldloc_S" Value="4" />
+      <Instruction OpCode="Ldnull" />
+      <Instruction OpCode="Ceq" />
+      <Instruction OpCode="Brtrue_S" />
+      <Instruction OpCode="Ldloc_S" Value="4" />
+      <Instruction OpCode="Ret" />
+    </Method>
+  </Class>
   <Class Name="LandingShipManager">
     <Method Name="tick" Location="93" DeleteCount="1">
       <Instruction OpCode="Ldc.I4" Value="161803" />

@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
+using System.Reflection;
+using System.Xml;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using System.IO;
-using System.Xml;
-using System.Reflection;
+using MethodBody = Mono.Cecil.Cil.MethodBody;
 
 namespace PhiPatcher
 {
@@ -18,7 +17,7 @@ namespace PhiPatcher
         private string MovedAssemblyPath = "Assembly-CSharp.original.dll";
         private string PhiAssemblyPath = "PhiScript.dll";
 
-        private Boolean AlreadyPatched = false;
+        private Boolean AlreadyPatched;
 
         private XmlDocument ModificationsXml;
 
@@ -28,44 +27,39 @@ namespace PhiPatcher
         private AssemblyDefinition PhiAssembly;
         private TypeDefinition PhiType;
 
-        public Program()
-        {
-
-        }
-
         public void Run()
         {
             /**
              * We check if the assembly has already been patched
              */
-            this.AlreadyPatched = File.Exists(this.MovedAssemblyPath);
+            AlreadyPatched = File.Exists(MovedAssemblyPath);
 
-            if (this.AlreadyPatched)
+            if (AlreadyPatched)
             {
-                Console.WriteLine(this.MovedAssemblyPath + " already present");
-                Console.WriteLine("Using the backed-up " + this.MovedAssemblyPath);
+                Console.WriteLine(MovedAssemblyPath + " already present");
+                Console.WriteLine("Using the backed-up " + MovedAssemblyPath);
             }
 
             /**
              * We launch the patching
              */
-            this.ModificationsXml = this.LoadModifications(this.ModificationsXmlPath);
+            ModificationsXml = LoadModifications(ModificationsXmlPath);
 
-            this.LoadAssemblies();
-            this.PatchModifications();
+            LoadAssemblies();
+            PatchModifications();
 
             /**
              * We save or rename everything
              */
             // We rename the original dll
-            if (!this.AlreadyPatched)
+            if (!AlreadyPatched)
             {
-                System.IO.File.Move(this.AssemblyPath, this.MovedAssemblyPath);
+                File.Move(AssemblyPath, MovedAssemblyPath);
             }
 
-            Console.WriteLine("Writing the new Assembly in " + this.AssemblyPath);
+            Console.WriteLine("Writing the new Assembly in " + AssemblyPath);
 
-            this.CSharpAssembly.Write(this.AssemblyPath);
+            CSharpAssembly.Write(AssemblyPath);
 
             Console.WriteLine("Finished Writing");
 
@@ -79,27 +73,27 @@ namespace PhiPatcher
              * We first load the PhiScript assembly containing the static
              * methods that must be called
              */
-            if (File.Exists(this.PhiAssemblyPath))
+            if (File.Exists(PhiAssemblyPath))
             {
                 try
                 {
-                    this.PhiAssembly = AssemblyDefinition.ReadAssembly(this.PhiAssemblyPath);
+                    PhiAssembly = AssemblyDefinition.ReadAssembly(PhiAssemblyPath);
                 }
-                catch (FileNotFoundException e)
+                catch (FileNotFoundException)
                 {
-                    Console.WriteLine("Can't find file " + this.PhiAssemblyPath);
+                    Console.WriteLine("Can't find file " + PhiAssemblyPath);
                     Console.Read();
                     return;
                 }
                 catch
                 {
-                    Console.WriteLine("Couldn't load " + this.PhiAssemblyPath);
+                    Console.WriteLine("Couldn't load " + PhiAssemblyPath);
                     Console.Read();
                     return;
                 }
 
-                ModuleDefinition phiModule = this.PhiAssembly.MainModule;
-                this.PhiType = phiModule.GetType("PhiScript.Phi");
+                ModuleDefinition phiModule = PhiAssembly.MainModule;
+                PhiType = phiModule.GetType("PhiScript.Phi");
             }
 
             /**
@@ -110,40 +104,40 @@ namespace PhiPatcher
              */
             try
             {
-                if (this.AlreadyPatched)
+                if (AlreadyPatched)
                 {
-                    this.CSharpAssembly = AssemblyDefinition.ReadAssembly(this.MovedAssemblyPath);
+                    CSharpAssembly = AssemblyDefinition.ReadAssembly(MovedAssemblyPath);
                 }
                 else
                 {
-                    this.CSharpAssembly = AssemblyDefinition.ReadAssembly(this.AssemblyPath);
+                    CSharpAssembly = AssemblyDefinition.ReadAssembly(AssemblyPath);
                 }
             }
-            catch (FileNotFoundException e)
+            catch (FileNotFoundException)
             {
-                Console.WriteLine("Can't find file " + this.AssemblyPath);
+                Console.WriteLine("Can't find file " + AssemblyPath);
                 Console.Read();
                 return;
             }
             catch
             {
-                Console.WriteLine("Couldn't load " + this.AssemblyPath);
+                Console.WriteLine("Couldn't load " + AssemblyPath);
                 Console.Read();
                 return;
             }
 
-            this.CSharpModule = this.CSharpAssembly.MainModule;
+            CSharpModule = CSharpAssembly.MainModule;
         }
 
         public void PatchModifications()
         {
-            XmlNode modifsNode = this.ModificationsXml.SelectSingleNode("Modifications");
+            XmlNode modifsNode = ModificationsXml.SelectSingleNode("Modifications");
 
             foreach (XmlNode classNode in modifsNode.ChildNodes)
             {
                 // We load the class in which the modifications will take place
                 string nameTypeToPatch = classNode.Attributes["Name"].Value;
-                TypeDefinition typeToPatch = this.CSharpModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
+                TypeDefinition typeToPatch = CSharpModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
 
                 if (typeToPatch == null)
                 {
@@ -162,7 +156,9 @@ namespace PhiPatcher
                         continue;
                     }
 
-                    ILProcessor processor = methodToPatch.Body.GetILProcessor();
+                    MethodBody methodBody = methodToPatch.Body;
+
+                    ILProcessor processor = methodBody.GetILProcessor();
 
                     // By default, we place the modification just before the "ret" instruction
                     // (i.e. before the last instruction)
@@ -186,29 +182,40 @@ namespace PhiPatcher
                         }
                     }
 
-                    Instruction prevInstr = methodToPatch.Body.Instructions.ElementAt(indexBegin).Previous;
+                    if (methodNode.Attributes["TempVariable"] != null)
+                    {
+                        string tempVariable = methodNode.Attributes["TempVariable"].Value;
+
+                        TypeReference typeReference = CSharpModule.Import(Type.GetType(tempVariable));
+                        methodBody.Variables.Add(new VariableDefinition(CSharpModule.Import(Type.GetType(tempVariable))));
+                    }
+
+
+                    Instruction locationInstr = methodToPatch.Body.Instructions.ElementAt(indexBegin);
+                    Instruction prevInstr = locationInstr.Previous;
 
                     foreach (XmlNode instrNode in methodNode.ChildNodes)
                     {
-                        Instruction instr = this.ParseInstruction(processor, typeToPatch, instrNode);
+                        Instruction instr = ParseInstruction(processor, methodBody, typeToPatch, instrNode, locationInstr);
 
                         if (instr == null)
                         {
                             continue;
                         }
 
-                        processor.InsertAfter(
-                            prevInstr,
-                            instr
-                        );
+                        if (prevInstr == null)
+                            processor.InsertBefore(locationInstr, instr);
+                        else
+                            processor.InsertAfter(prevInstr, instr);
 
                         prevInstr = instr;
                     }
+
                 }
             }
         }
 
-        public Instruction ParseInstruction(ILProcessor processor, TypeDefinition type, XmlNode instrXml)
+        public Instruction ParseInstruction(ILProcessor processor, MethodBody methodBody, TypeDefinition type, XmlNode instrXml, Instruction locationInstr)
         {
             Instruction instr = null;
 
@@ -225,11 +232,11 @@ namespace PhiPatcher
                 // We search in which assembly should we pull the method
                 if (assemblyName == "CSharp-Assembly")
                 {
-                    module = this.CSharpAssembly.MainModule;
+                    module = CSharpAssembly.MainModule;
                 }
                 else if (assemblyName == "PhiScript")
                 {
-                    module = this.PhiAssembly.MainModule;
+                    module = PhiAssembly.MainModule;
                 }
                 else
                 {
@@ -254,7 +261,7 @@ namespace PhiPatcher
                     return null;
                 }
 
-                MethodReference methodToAddImported = this.CSharpAssembly.MainModule.Import(methodToAdd);
+                MethodReference methodToAddImported = CSharpAssembly.MainModule.Import(methodToAdd);
 
                 instr = processor.Create(OpCodes.Call, methodToAddImported);
             }
@@ -278,6 +285,56 @@ namespace PhiPatcher
             else if (nameOpCode == "Ldarg_0")
             {
                 instr = processor.Create(OpCodes.Ldarg_0);
+            }
+            else if (nameOpCode == "Stloc_0")
+            {
+                instr = processor.Create(OpCodes.Stloc_0);
+            }
+            else if (nameOpCode == "Ldloc_0")
+            {
+                instr = processor.Create(OpCodes.Ldloc_0);
+            }
+            else if (nameOpCode == "Stloc_S")
+            {
+                int value = Int32.Parse(instrXml.Attributes["Value"].Value);
+                instr = processor.Create(OpCodes.Stloc_S, methodBody.Variables[value]);
+            }
+            else if (nameOpCode == "Ldloc_S")
+            {
+                int value = Int32.Parse(instrXml.Attributes["Value"].Value);
+                instr = processor.Create(OpCodes.Ldloc_S, methodBody.Variables[value]);
+            }
+            else if (nameOpCode == "Brtrue_S")
+            {
+                Instruction target = locationInstr;
+                if (instrXml.Attributes["Value"] != null)
+                {
+                    
+                }
+
+                instr = processor.Create(OpCodes.Brtrue_S, target);
+            }
+            else if (nameOpCode == "Brfalse_S")
+            {
+                Instruction target = locationInstr;
+                if (instrXml.Attributes["Value"] != null)
+                {
+
+                }
+
+                instr = processor.Create(OpCodes.Brfalse_S, target);
+            }
+            else if (nameOpCode == "Ret")
+            {
+                instr = processor.Create(OpCodes.Ret);
+            }
+            else if (nameOpCode == "Ldnull")
+            {
+                instr = processor.Create(OpCodes.Ldnull);
+            }
+            else if (nameOpCode == "Ceq")
+            {
+                instr = processor.Create(OpCodes.Ceq);
             }
             else
             {
@@ -324,8 +381,8 @@ namespace PhiPatcher
 
         public InstructionEntry(OpCode opCode, string arg)
         {
-            this.OpCode = opCode;
-            this.Arg = arg;
+            OpCode = opCode;
+            Arg = arg;
         }
     }
 }

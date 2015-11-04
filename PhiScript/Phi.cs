@@ -14,6 +14,7 @@ namespace PhiScript
         public static Phi Instance;
 
         public List<Mod> Mods = new List<Mod>();
+        public ConstructionComponentManager ConstructionComponentManager;
         public GuiManager GuiManager;
         public ModuleManager ModuleManager;
 
@@ -24,8 +25,9 @@ namespace PhiScript
 
         public Phi()
         {
-            this.GuiManager = new GuiManager();
-            this.ModuleManager = new ModuleManager();
+            ConstructionComponentManager = new ConstructionComponentManager();
+            GuiManager = new GuiManager();
+            ModuleManager = new ModuleManager();
         }
 
         /// <summary>
@@ -34,17 +36,22 @@ namespace PhiScript
         /// <returns></returns>
         public Selectable GetSelection()
         {
-            return Phi.GetPrivateStaticField<Selectable>(typeof(Selection), "mSelected");
+            return GetPrivateStaticField<Selectable>(typeof(Selection), "mSelected");
         }
 
         public GameManager GetGameManager()
         {
-            return Phi.GetPrivateStaticField<GameManager>(typeof(GameManager), "mInstance");
+            return GetPrivateStaticField<GameManager>(typeof(GameManager), "mInstance");
         }
 
         public static T GetPrivateField<T>(object obj, string field)
         {
             return (T) obj.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj);
+        }
+
+        public static void SetPrivateField(object obj, string field, object value)
+        {
+            obj.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(obj, value);
         }
 
         public static T GetPrivateStaticField<T>(Type type, string field)
@@ -57,12 +64,25 @@ namespace PhiScript
             return ResourceTypeList.get();
         }
 
+        public List<ComponentType> GetComponentTypes()
+        {
+            return ComponentTypeList.get();
+        }
+
         public void AddResourceType(ResourceType resourceType)
         {
             ResourceTypeList resourceTypeList = ResourceTypeList.getInstance();
             MethodInfo method = resourceTypeList.GetType().GetMethod("addResource", BindingFlags.NonPublic | BindingFlags.Instance);
 
             method.Invoke(resourceTypeList, new object[] { resourceType });
+        }
+
+        public void AddComponentType(ComponentType componentType)
+        {
+            ComponentTypeList componentTypeList = ComponentTypeList.getInstance();
+            MethodInfo method = componentTypeList.GetType().GetMethod("add", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            method.Invoke(componentTypeList, new object[] { componentType });
         }
 
         public void Launch()
@@ -116,6 +136,16 @@ namespace PhiScript
             Phi.Instance = new Phi();
 
             Phi.Instance.Launch();
+        }
+
+        public static bool HasValue(bool? input)
+        {
+            return input.HasValue;
+        }
+
+        public static bool GetValue(bool? input)
+        {
+            return input.Value;
         }
     }
 
