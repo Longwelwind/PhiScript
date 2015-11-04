@@ -31,7 +31,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Event\Event.cs" />
     <Compile Include="Event\EventGui.cs" />
     <Compile Include="Manager\GuiManager.cs" />
     <Compile Include="Manager\ModuleManager.cs" />
