@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.IO;
@@ -26,7 +24,6 @@ namespace PhiPatcher
         private ModuleDefinition CSharpModule;
 
         private AssemblyDefinition PhiAssembly;
-        private TypeDefinition PhiType;
 
         public Program()
         {
@@ -85,7 +82,7 @@ namespace PhiPatcher
                 {
                     this.PhiAssembly = AssemblyDefinition.ReadAssembly(this.PhiAssemblyPath);
                 }
-                catch (FileNotFoundException e)
+                catch (FileNotFoundException)
                 {
                     Console.WriteLine("Can't find file " + this.PhiAssemblyPath);
                     Console.Read();
@@ -99,7 +96,6 @@ namespace PhiPatcher
                 }
 
                 ModuleDefinition phiModule = this.PhiAssembly.MainModule;
-                this.PhiType = phiModule.GetType("PhiScript.Phi");
             }
 
             /**
@@ -119,7 +115,7 @@ namespace PhiPatcher
                     this.CSharpAssembly = AssemblyDefinition.ReadAssembly(this.AssemblyPath);
                 }
             }
-            catch (FileNotFoundException e)
+            catch (FileNotFoundException)
             {
                 Console.WriteLine("Can't find file " + this.AssemblyPath);
                 Console.Read();
