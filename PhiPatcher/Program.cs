@@ -2,6 +2,7 @@
 using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
 using System.IO;
 using System.Xml;
 using System.Reflection;
@@ -200,6 +201,9 @@ namespace PhiPatcher
 
                         prevInstr = instr;
                     }
+
+					// Optimize the method
+					methodToPatch.Body.OptimizeMacros();
                 }
             }
         }
