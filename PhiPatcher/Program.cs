@@ -211,6 +211,8 @@ namespace PhiPatcher
                         prevInstr = instr;
                     }
 
+					// Optimize the method
+					methodToPatch.Body.OptimizeMacros();
                 }
             }
         }
