@@ -359,23 +359,4 @@ namespace PhiPatcher
             program.Run();
         }
     }
-
-    public class InstructionEntry
-    {
-        public OpCode OpCode
-        {
-            get;
-        }
-
-        public string Arg
-        {
-            get;
-        }
-
-        public InstructionEntry(OpCode opCode, string arg)
-        {
-            OpCode = opCode;
-            Arg = arg;
-        }
-    }
 }
