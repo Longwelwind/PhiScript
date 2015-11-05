@@ -96,7 +96,7 @@ namespace PhiScript
 
             foreach (string modPath in modsPaths)
             {
-                System.Console.WriteLine(modPath);
+                Console.WriteLine(modPath);
                 Assembly asm = Assembly.LoadFile(modPath);
 
                 // We're looking for the first class that inherits from Mod
@@ -106,16 +106,11 @@ namespace PhiScript
                 {
                     Mod mod = (Mod)Activator.CreateInstance(modClass);
 
-                    this.Mods.Add(mod);
-                }
-                else
-                {
-                    // No Mod class was found for this .dll
-                    // Error display ?
+                    Mods.Add(mod);
                 }
             }
 
-            foreach (Mod mod in this.Mods)
+            foreach (Mod mod in Mods)
             {
                 mod.Init();
             }
@@ -126,15 +121,14 @@ namespace PhiScript
          */
         public static void OnTick()
         {
-            if (Phi.Instance.TickEvent != null)
-                Phi.Instance.TickEvent(Phi.Instance, new EventArgs());
+            Instance.TickEvent?.Invoke(Instance, new EventArgs());
         }
 
         public static void StaticLaunch()
         {
-            Phi.Instance = new Phi();
+            Instance = new Phi();
 
-            Phi.Instance.Launch();
+            Instance.Launch();
         }
 
         public static bool HasValue(bool? input)
