@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Xml;
+using System.Xml.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
@@ -12,15 +12,15 @@ namespace PhiPatcher
 {
     class Program
     {
-        private string ModificationsXmlPath = "PhiPatcher.Modifications.xml";
+        private const string ModificationsXmlPath = "PhiPatcher.Modifications.xml";
 
-        private string AssemblyPath = "Assembly-CSharp.dll";
-        private string MovedAssemblyPath = "Assembly-CSharp.original.dll";
-        private string PhiAssemblyPath = "PhiScript.dll";
+        private const string AssemblyPath = "Assembly-CSharp.dll";
+        private const string MovedAssemblyPath = "Assembly-CSharp.original.dll";
+        private const string PhiAssemblyPath = "PhiScript.dll";
 
         private bool _alreadyPatched;
 
-        private XmlDocument _modificationsXml;
+        private XElement _modificationsXml;
 
         private AssemblyDefinition _cSharpAssembly;
         private ModuleDefinition _cSharpModule;
@@ -43,7 +43,7 @@ namespace PhiPatcher
             /**
              * We launch the patching
              */
-            _modificationsXml = LoadModifications(ModificationsXmlPath);
+            _modificationsXml = XElement.Load(Assembly.GetExecutingAssembly().GetManifestResourceStream(ModificationsXmlPath));
 
             LoadAssemblies();
             PatchModifications();
@@ -123,12 +123,10 @@ namespace PhiPatcher
 
         public void PatchModifications()
         {
-            XmlNode modifsNode = _modificationsXml.SelectSingleNode("Modifications");
-
-            foreach (XmlNode classNode in modifsNode.ChildNodes)
+            foreach (XElement classNode in _modificationsXml.Elements("Class"))
             {
                 // We load the class in which the modifications will take place
-                string nameTypeToPatch = classNode.Attributes["Name"].Value;
+                string nameTypeToPatch = classNode.Attribute("Name").Value;
                 TypeDefinition typeToPatch = _cSharpModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
 
                 if (typeToPatch == null)
@@ -137,9 +135,9 @@ namespace PhiPatcher
                     continue;
                 }
 
-                foreach (XmlNode methodNode in classNode.ChildNodes)
+                foreach (XElement methodNode in classNode.Elements("Method"))
                 {
-                    string nameMethodTopatch = methodNode.Attributes["Name"].Value;
+                    string nameMethodTopatch = methodNode.Attribute("Name").Value;
                     MethodDefinition methodToPatch = typeToPatch.Methods.FirstOrDefault(m => m.Name == nameMethodTopatch);
 
                     if (methodToPatch == null)
@@ -157,16 +155,16 @@ namespace PhiPatcher
                     int indexBegin = methodToPatch.Body.Instructions.Count - 1;
 
                     // If the user specified a location, we begin there
-                    if (methodNode.Attributes["Location"] != null)
+                    if (methodNode.Attribute("Location") != null)
                     {
-                        indexBegin = Int32.Parse(methodNode.Attributes["Location"].Value);
+                        indexBegin = int.Parse(methodNode.Attribute("Location").Value);
                     }
 
                     // If the user specified a count of instructions to delete,
                     // we delete them
-                    if (methodNode.Attributes["DeleteCount"] != null)
+                    if (methodNode.Attribute("DeleteCount") != null)
                     {
-                        int countInstrToDelete = Int32.Parse(methodNode.Attributes["DeleteCount"].Value);
+                        int countInstrToDelete = int.Parse(methodNode.Attribute("DeleteCount").Value);
 
                         for (int i = 0;i < countInstrToDelete;i++)
                         {
@@ -174,9 +172,9 @@ namespace PhiPatcher
                         }
                     }
 
-                    if (methodNode.Attributes["TempVariable"] != null)
+                    if (methodNode.Attribute("TempVariable") != null)
                     {
-                        string tempVariable = methodNode.Attributes["TempVariable"].Value;
+                        string tempVariable = methodNode.Attribute("TempVariable").Value;
 
                         methodBody.Variables.Add(new VariableDefinition(_cSharpModule.Import(Type.GetType(tempVariable))));
                     }
@@ -185,7 +183,7 @@ namespace PhiPatcher
                     Instruction locationInstr = methodToPatch.Body.Instructions.ElementAt(indexBegin);
                     Instruction prevInstr = locationInstr.Previous;
 
-                    foreach (XmlNode instrNode in methodNode.ChildNodes)
+                    foreach (XElement instrNode in methodNode.Descendants())
                     {
                         Instruction instr = ParseInstruction(processor, methodBody, typeToPatch, instrNode, locationInstr);
 
@@ -208,17 +206,17 @@ namespace PhiPatcher
             }
         }
 
-        public Instruction ParseInstruction(ILProcessor processor, MethodBody methodBody, TypeDefinition type, XmlNode instrXml, Instruction locationInstr)
+        public Instruction ParseInstruction(ILProcessor processor, MethodBody methodBody, TypeDefinition type, XElement instrXml, Instruction locationInstr)
         {
             Instruction instr = null;
 
-            string nameOpCode = instrXml.Attributes["OpCode"].Value;
+            string nameOpCode = instrXml.Attribute("OpCode").Value;
 
             if (nameOpCode == "Call")
             {
-                string assemblyName = instrXml.Attributes["Assembly"].Value;
-                string classToAddName = instrXml.Attributes["Class"].Value;
-                string methodToAddName = instrXml.Attributes["Method"].Value;
+                string assemblyName = instrXml.Attribute("Assembly").Value;
+                string classToAddName = instrXml.Attribute("Class").Value;
+                string methodToAddName = instrXml.Attribute("Method").Value;
 
                 ModuleDefinition module;
 
@@ -260,12 +258,12 @@ namespace PhiPatcher
             }
             else if (nameOpCode == "Ldc.I4")
             {
-                int value = Int32.Parse(instrXml.Attributes["Value"].Value);
+                int value = Int32.Parse(instrXml.Attribute("Value").Value);
                 instr = processor.Create(OpCodes.Ldc_I4, value);
             }
             else if (nameOpCode == "Ldfld")
             {
-                string fieldName = instrXml.Attributes["Field"].Value;
+                string fieldName = instrXml.Attribute("Field").Value;
                 FieldDefinition field = type.Fields.FirstOrDefault(f => f.Name == fieldName);
 
                 if (field == null)
@@ -289,18 +287,18 @@ namespace PhiPatcher
             }
             else if (nameOpCode == "Stloc_S")
             {
-                int value = Int32.Parse(instrXml.Attributes["Value"].Value);
+                int value = Int32.Parse(instrXml.Attribute("Value").Value);
                 instr = processor.Create(OpCodes.Stloc_S, methodBody.Variables[value]);
             }
             else if (nameOpCode == "Ldloc_S")
             {
-                int value = Int32.Parse(instrXml.Attributes["Value"].Value);
+                int value = Int32.Parse(instrXml.Attribute("Value").Value);
                 instr = processor.Create(OpCodes.Ldloc_S, methodBody.Variables[value]);
             }
             else if (nameOpCode == "Brtrue_S")
             {
                 Instruction target = locationInstr;
-                if (instrXml.Attributes["Value"] != null)
+                if (instrXml.Attribute("Value") != null)
                 {
                     
                 }
@@ -310,7 +308,7 @@ namespace PhiPatcher
             else if (nameOpCode == "Brfalse_S")
             {
                 Instruction target = locationInstr;
-                if (instrXml.Attributes["Value"] != null)
+                if (instrXml.Attribute("Value") != null)
                 {
 
                 }
@@ -335,21 +333,6 @@ namespace PhiPatcher
             }
 
             return instr;
-        }
-
-        public XmlDocument LoadModifications(string path)
-        {
-            /**
-             * We load the file containing the modifications to patch
-             * in the assembly
-             */
-            var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(path);
-            StreamReader reader = new StreamReader(stream);
-
-            XmlDocument modif = new XmlDocument();
-            modif.LoadXml(reader.ReadToEnd());
-
-            return modif;
         }
 
         static void Main()
