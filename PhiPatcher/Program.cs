@@ -8,24 +8,25 @@ using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Collections.Generic;
+using System.Xml;
 
 namespace PhiPatcher
 {
     class Program
     {
-        private string ModificationsXmlPath = "PhiPatcher.Modifications.xml";
+        private const string ModificationsXmlPath = "PhiPatcher.Modifications.xml";
 
-        private string AssemblyPath = "Assembly-CSharp.dll";
-        private string MovedAssemblyPath = "Assembly-CSharp.original.dll";
+        private const string AssemblyPath = "Assembly-CSharp.dll";
+        private const string MovedAssemblyPath = "Assembly-CSharp.original.dll";
 
-        private Dictionary<string, AssemblyDefinition> _loadedAssemblies = new Dictionary<string, AssemblyDefinition>();
+        private Dictionary<string, AssemblyDefinition> mLoadedAssemblies = new Dictionary<string, AssemblyDefinition>();
 
-        private bool _alreadyPatched;
+        private bool mAlreadyPatched;
 
-        private XmlDocument _modificationsXml;
+        private XElement mXElement;
 
-        private AssemblyDefinition _cSharpAssembly;
-        private ModuleDefinition _cSharpModule;
+        private AssemblyDefinition mCSharpAssembly;
+        private ModuleDefinition mCSharpModule;
 
         public void Run()
         {
@@ -43,18 +44,18 @@ namespace PhiPatcher
             /**
              * We load the target assembly
              */
-            string assemblyPath = _alreadyPatched ? MovedAssemblyPath : AssemblyPath;
-            _cSharpAssembly = GetAssembly(assemblyPath);
+            string assemblyPath = mAlreadyPatched ? MovedAssemblyPath : AssemblyPath;
+            mCSharpAssembly = GetAssembly(assemblyPath);
 
-            if (_cSharpAssembly == null)
+            if (mCSharpAssembly == null)
             {
                 return;
             }
-            
+
             /**
              * We launch the patching
              */
-            _modificationsXml = LoadModifications(ModificationsXmlPath);
+            mXElement = LoadModifications(ModificationsXmlPath);
             
             PatchModifications();
 
@@ -79,9 +80,9 @@ namespace PhiPatcher
 
         public AssemblyDefinition GetAssembly(string name)
         {
-            if (_loadedAssemblies.ContainsKey(name))
+            if (mLoadedAssemblies.ContainsKey(name))
             {
-                return _loadedAssemblies[name];
+                return mLoadedAssemblies[name];
             }
             else
             {
@@ -89,7 +90,7 @@ namespace PhiPatcher
 
                 if (assembly != null)
                 {
-                    _loadedAssemblies.Add(name, assembly);
+                    mLoadedAssemblies.Add(name, assembly);
                     return assembly;
                 }
                 else
@@ -331,19 +332,14 @@ namespace PhiPatcher
             return instr;
         }
 
-        public XmlDocument LoadModifications(string path)
+        public XElement LoadModifications(string path)
         {
             /**
              * We load the file containing the modifications to patch
              * in the assembly
              */
-            var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(path);
-            StreamReader reader = new StreamReader(stream);
-
-            XmlDocument modif = new XmlDocument();
-            modif.LoadXml(reader.ReadToEnd());
-
-            return modif;
+            Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(path);
+            return XElement.Load(stream);
         }
 
         static void Main()
