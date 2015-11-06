@@ -1,12 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Xml;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
+using System.Collections.Generic;
 
 namespace PhiPatcher
 {
@@ -16,7 +16,8 @@ namespace PhiPatcher
 
         private string AssemblyPath = "Assembly-CSharp.dll";
         private string MovedAssemblyPath = "Assembly-CSharp.original.dll";
-        private string PhiAssemblyPath = "PhiScript.dll";
+
+        private Dictionary<string, AssemblyDefinition> _loadedAssemblies = new Dictionary<string, AssemblyDefinition>();
 
         private bool _alreadyPatched;
 
@@ -24,8 +25,6 @@ namespace PhiPatcher
 
         private AssemblyDefinition _cSharpAssembly;
         private ModuleDefinition _cSharpModule;
-
-        private AssemblyDefinition _phiAssembly;
 
         public void Run()
         {
@@ -41,11 +40,21 @@ namespace PhiPatcher
             }
 
             /**
+             * We load the target assembly
+             */
+            string assemblyPath = _alreadyPatched ? MovedAssemblyPath : AssemblyPath;
+            _cSharpAssembly = GetAssembly(assemblyPath);
+
+            if (_cSharpAssembly == null)
+            {
+                return;
+            }
+            
+            /**
              * We launch the patching
              */
             _modificationsXml = LoadModifications(ModificationsXmlPath);
-
-            LoadAssemblies();
+            
             PatchModifications();
 
             /**
@@ -67,58 +76,50 @@ namespace PhiPatcher
             Console.Read();
         }
 
-        public void LoadAssemblies()
+        public AssemblyDefinition GetAssembly(string name)
         {
-            /**
-             * We first load the PhiScript assembly containing the static
-             * methods that must be called
-             */
-            if (File.Exists(PhiAssemblyPath))
+            if (_loadedAssemblies.ContainsKey(name))
+            {
+                return _loadedAssemblies[name];
+            }
+            else
+            {
+                AssemblyDefinition assembly = LoadAssembly(name);
+
+                if (assembly != null)
+                {
+                    _loadedAssemblies.Add(name, assembly);
+                    return assembly;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+
+        public AssemblyDefinition LoadAssembly(string path)
+        {
+            if (File.Exists(path))
             {
                 try
                 {
-                    _phiAssembly = AssemblyDefinition.ReadAssembly(PhiAssemblyPath);
+                    AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(path);
+
+                    return assembly;
                 }
-                catch (FileNotFoundException)
+                catch (Exception e)
                 {
-                    Console.WriteLine("Can't find file " + PhiAssemblyPath);
-                    Console.Read();
-                    return;
+                    Console.WriteLine("Couldn't load assembly " + path);
+                    Console.WriteLine(e);
                 }
-                catch
-                {
-                    Console.WriteLine("Couldn't load " + PhiAssemblyPath);
-                    Console.Read();
-                    return;
-                }
-
-                ModuleDefinition phiModule = _phiAssembly.MainModule;
+            }
+            else
+            {
+                Console.WriteLine("Assembly " + path + " doesn't exist");
             }
 
-            /**
-             * We then load the Assembly-CSharp assembly that contains the
-             * vanilla code
-             * If it is the first use, we read Assembly-CSharp.dll, but if it is
-             * not we read Assembly-CSharp.original.dll
-             */
-            try
-            {
-                _cSharpAssembly = AssemblyDefinition.ReadAssembly(_alreadyPatched ? MovedAssemblyPath : AssemblyPath);
-            }
-            catch (FileNotFoundException)
-            {
-                Console.WriteLine("Can't find file " + AssemblyPath);
-                Console.Read();
-                return;
-            }
-            catch
-            {
-                Console.WriteLine("Couldn't load " + AssemblyPath);
-                Console.Read();
-                return;
-            }
-
-            _cSharpModule = _cSharpAssembly.MainModule;
+            return null;
         }
 
         public void PatchModifications()
@@ -220,23 +221,17 @@ namespace PhiPatcher
                 string classToAddName = instrXml.Attributes["Class"].Value;
                 string methodToAddName = instrXml.Attributes["Method"].Value;
 
-                ModuleDefinition module;
+                
 
                 // We search in which assembly should we pull the method
-                if (assemblyName == "CSharp-Assembly")
+                AssemblyDefinition assembly = GetAssembly(assemblyName + ".dll");
+
+                if (assembly == null)
                 {
-                    module = _cSharpAssembly.MainModule;
-                }
-                else if (assemblyName == "PhiScript")
-                {
-                    module = _phiAssembly.MainModule;
-                }
-                else
-                {
-                    // Error handling
-                    Console.WriteLine("Couldn't find assembly named " + assemblyName);
                     return null;
                 }
+
+                ModuleDefinition module = assembly.MainModule;
 
                 TypeDefinition typeToAdd = module.Types.FirstOrDefault(t => t.Name == classToAddName);
 
@@ -343,7 +338,7 @@ namespace PhiPatcher
              * We load the file containing the modifications to patch
              * in the assembly
              */
-            var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(path);
+            var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(path);
             StreamReader reader = new StreamReader(stream);
 
             XmlDocument modif = new XmlDocument();
