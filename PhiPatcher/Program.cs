@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -18,23 +19,26 @@ namespace PhiPatcher
         private const string MovedAssemblyPath = "Assembly-CSharp.original.dll";
         private const string PhiAssemblyPath = "PhiScript.dll";
 
-        private bool _alreadyPatched;
+        private bool mAlreadyPatched;
 
-        private XElement _modificationsXml;
+        private XElement mPatches;
 
-        private AssemblyDefinition _cSharpAssembly;
-        private ModuleDefinition _cSharpModule;
+        private AssemblyDefinition mCSharpAssembly;
+        private ModuleDefinition mCSharpModule;
 
-        private AssemblyDefinition _phiAssembly;
+        private AssemblyDefinition mPhiAssembly;
+        private ModuleDefinition mPhiModule;
+
+        private AssemblyDefinition mCorlibAssembly;
 
         public void Run()
         {
             /**
              * We check if the assembly has already been patched
              */
-            _alreadyPatched = File.Exists(MovedAssemblyPath);
+            mAlreadyPatched = File.Exists(MovedAssemblyPath);
 
-            if (_alreadyPatched)
+            if (mAlreadyPatched)
             {
                 Console.WriteLine(MovedAssemblyPath + " already present");
                 Console.WriteLine("Using the backed-up " + MovedAssemblyPath);
@@ -43,7 +47,7 @@ namespace PhiPatcher
             /**
              * We launch the patching
              */
-            _modificationsXml = XElement.Load(Assembly.GetExecutingAssembly().GetManifestResourceStream(ModificationsXmlPath));
+            mPatches = XElement.Load(Assembly.GetExecutingAssembly().GetManifestResourceStream(ModificationsXmlPath));
 
             LoadAssemblies();
             PatchModifications();
@@ -52,14 +56,14 @@ namespace PhiPatcher
              * We save or rename everything
              */
             // We rename the original dll
-            if (!_alreadyPatched)
+            if (!mAlreadyPatched)
             {
                 File.Move(AssemblyPath, MovedAssemblyPath);
             }
 
             Console.WriteLine("Writing the new Assembly in " + AssemblyPath);
 
-            _cSharpAssembly.Write(AssemblyPath);
+            mCSharpAssembly.Write(AssemblyPath);
 
             Console.WriteLine("Finished Writing");
 
@@ -77,7 +81,7 @@ namespace PhiPatcher
             {
                 try
                 {
-                    _phiAssembly = AssemblyDefinition.ReadAssembly(PhiAssemblyPath);
+                    mPhiAssembly = AssemblyDefinition.ReadAssembly(PhiAssemblyPath);
                 }
                 catch (FileNotFoundException)
                 {
@@ -92,7 +96,7 @@ namespace PhiPatcher
                     return;
                 }
 
-                ModuleDefinition phiModule = _phiAssembly.MainModule;
+                ModuleDefinition phiModule = mPhiAssembly.MainModule;
             }
 
             /**
@@ -103,7 +107,7 @@ namespace PhiPatcher
              */
             try
             {
-                _cSharpAssembly = AssemblyDefinition.ReadAssembly(_alreadyPatched ? MovedAssemblyPath : AssemblyPath);
+                mCSharpAssembly = AssemblyDefinition.ReadAssembly(mAlreadyPatched ? MovedAssemblyPath : AssemblyPath);
             }
             catch (FileNotFoundException)
             {
@@ -118,16 +122,23 @@ namespace PhiPatcher
                 return;
             }
 
-            _cSharpModule = _cSharpAssembly.MainModule;
+            mCSharpModule = mCSharpAssembly.MainModule;
+
+            mCorlibAssembly = AssemblyDefinition.ReadAssembly(@"C:\Windows\Microsoft.NET\Framework64\v2.0.50727\mscorlib.dll");
+            TypeDefinition typeToAdd = mCorlibAssembly.MainModule.Types.FirstOrDefault(t => t.Name == "Nullable");
+            var temp = typeToAdd.GetStaticConstructor()
+            MethodDefinition methodToAdd = typeToAdd.Methods.FirstOrDefault(m => m.Name == "get_HasValue");
+
+            Debug.WriteLine("");
         }
 
         public void PatchModifications()
         {
-            foreach (XElement classNode in _modificationsXml.Elements("Class"))
+            foreach (XElement classNode in mPatches.Elements("Class"))
             {
                 // We load the class in which the modifications will take place
                 string nameTypeToPatch = classNode.Attribute("Name").Value;
-                TypeDefinition typeToPatch = _cSharpModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
+                TypeDefinition typeToPatch = mCSharpModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
 
                 if (typeToPatch == null)
                 {
@@ -176,7 +187,7 @@ namespace PhiPatcher
                     {
                         string tempVariable = methodNode.Attribute("TempVariable").Value;
 
-                        methodBody.Variables.Add(new VariableDefinition(_cSharpModule.Import(Type.GetType(tempVariable))));
+                        methodBody.Variables.Add(new VariableDefinition(mCSharpModule.Import(Type.GetType(tempVariable))));
                     }
 
 
@@ -223,11 +234,11 @@ namespace PhiPatcher
                 // We search in which assembly should we pull the method
                 if (assemblyName == "CSharp-Assembly")
                 {
-                    module = _cSharpAssembly.MainModule;
+                    module = mCSharpAssembly.MainModule;
                 }
                 else if (assemblyName == "PhiScript")
                 {
-                    module = _phiAssembly.MainModule;
+                    module = mPhiAssembly.MainModule;
                 }
                 else
                 {
@@ -252,7 +263,7 @@ namespace PhiPatcher
                     return null;
                 }
 
-                MethodReference methodToAddImported = _cSharpAssembly.MainModule.Import(methodToAdd);
+                MethodReference methodToAddImported = mCSharpAssembly.MainModule.Import(methodToAdd);
 
                 instr = processor.Create(OpCodes.Call, methodToAddImported);
             }
