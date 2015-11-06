@@ -96,7 +96,6 @@ namespace PhiScript
 
             foreach (string modPath in modsPaths)
             {
-                Console.WriteLine(modPath);
                 Assembly asm = Assembly.LoadFile(modPath);
 
                 // We're looking for the first class that inherits from Mod

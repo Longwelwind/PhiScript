@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -8,28 +7,25 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
+using System.Collections.Generic;
 
 namespace PhiPatcher
 {
     class Program
     {
-        private const string ModificationsXmlPath = "PhiPatcher.Modifications.xml";
+        private string ModificationsXmlPath = "PhiPatcher.Modifications.xml";
 
-        private const string AssemblyPath = "Assembly-CSharp.dll";
-        private const string MovedAssemblyPath = "Assembly-CSharp.original.dll";
-        private const string PhiAssemblyPath = "PhiScript.dll";
+        private string AssemblyPath = "Assembly-CSharp.dll";
+        private string MovedAssemblyPath = "Assembly-CSharp.original.dll";
 
-        private bool mAlreadyPatched;
+        private Dictionary<string, AssemblyDefinition> _loadedAssemblies = new Dictionary<string, AssemblyDefinition>();
 
-        private XElement mPatches;
+        private bool _alreadyPatched;
 
-        private AssemblyDefinition mCSharpAssembly;
-        private ModuleDefinition mCSharpModule;
+        private XmlDocument _modificationsXml;
 
-        private AssemblyDefinition mPhiAssembly;
-        private ModuleDefinition mPhiModule;
-
-        private AssemblyDefinition mCorlibAssembly;
+        private AssemblyDefinition _cSharpAssembly;
+        private ModuleDefinition _cSharpModule;
 
         public void Run()
         {
@@ -45,11 +41,21 @@ namespace PhiPatcher
             }
 
             /**
+             * We load the target assembly
+             */
+            string assemblyPath = _alreadyPatched ? MovedAssemblyPath : AssemblyPath;
+            _cSharpAssembly = GetAssembly(assemblyPath);
+
+            if (_cSharpAssembly == null)
+            {
+                return;
+            }
+            
+            /**
              * We launch the patching
              */
-            mPatches = XElement.Load(Assembly.GetExecutingAssembly().GetManifestResourceStream(ModificationsXmlPath));
-
-            LoadAssemblies();
+            _modificationsXml = LoadModifications(ModificationsXmlPath);
+            
             PatchModifications();
 
             /**
@@ -71,65 +77,50 @@ namespace PhiPatcher
             Console.Read();
         }
 
-        public void LoadAssemblies()
+        public AssemblyDefinition GetAssembly(string name)
         {
-            /**
-             * We first load the PhiScript assembly containing the static
-             * methods that must be called
-             */
-            if (File.Exists(PhiAssemblyPath))
+            if (_loadedAssemblies.ContainsKey(name))
+            {
+                return _loadedAssemblies[name];
+            }
+            else
+            {
+                AssemblyDefinition assembly = LoadAssembly(name);
+
+                if (assembly != null)
+                {
+                    _loadedAssemblies.Add(name, assembly);
+                    return assembly;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+
+        public AssemblyDefinition LoadAssembly(string path)
+        {
+            if (File.Exists(path))
             {
                 try
                 {
-                    mPhiAssembly = AssemblyDefinition.ReadAssembly(PhiAssemblyPath);
+                    AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(path);
+
+                    return assembly;
                 }
-                catch (FileNotFoundException)
+                catch (Exception e)
                 {
-                    Console.WriteLine("Can't find file " + PhiAssemblyPath);
-                    Console.Read();
-                    return;
+                    Console.WriteLine("Couldn't load assembly " + path);
+                    Console.WriteLine(e);
                 }
-                catch
-                {
-                    Console.WriteLine("Couldn't load " + PhiAssemblyPath);
-                    Console.Read();
-                    return;
-                }
-
-                ModuleDefinition phiModule = mPhiAssembly.MainModule;
             }
-
-            /**
-             * We then load the Assembly-CSharp assembly that contains the
-             * vanilla code
-             * If it is the first use, we read Assembly-CSharp.dll, but if it is
-             * not we read Assembly-CSharp.original.dll
-             */
-            try
+            else
             {
-                mCSharpAssembly = AssemblyDefinition.ReadAssembly(mAlreadyPatched ? MovedAssemblyPath : AssemblyPath);
-            }
-            catch (FileNotFoundException)
-            {
-                Console.WriteLine("Can't find file " + AssemblyPath);
-                Console.Read();
-                return;
-            }
-            catch
-            {
-                Console.WriteLine("Couldn't load " + AssemblyPath);
-                Console.Read();
-                return;
+                Console.WriteLine("Assembly " + path + " doesn't exist");
             }
 
-            mCSharpModule = mCSharpAssembly.MainModule;
-
-            mCorlibAssembly = AssemblyDefinition.ReadAssembly(@"C:\Windows\Microsoft.NET\Framework64\v2.0.50727\mscorlib.dll");
-            TypeDefinition typeToAdd = mCorlibAssembly.MainModule.Types.FirstOrDefault(t => t.Name == "Nullable");
-            var temp = typeToAdd.GetStaticConstructor()
-            MethodDefinition methodToAdd = typeToAdd.Methods.FirstOrDefault(m => m.Name == "get_HasValue");
-
-            Debug.WriteLine("");
+            return null;
         }
 
         public void PatchModifications()
@@ -229,23 +220,17 @@ namespace PhiPatcher
                 string classToAddName = instrXml.Attribute("Class").Value;
                 string methodToAddName = instrXml.Attribute("Method").Value;
 
-                ModuleDefinition module;
+                
 
                 // We search in which assembly should we pull the method
-                if (assemblyName == "CSharp-Assembly")
+                AssemblyDefinition assembly = GetAssembly(assemblyName + ".dll");
+
+                if (assembly == null)
                 {
-                    module = mCSharpAssembly.MainModule;
-                }
-                else if (assemblyName == "PhiScript")
-                {
-                    module = mPhiAssembly.MainModule;
-                }
-                else
-                {
-                    // Error handling
-                    Console.WriteLine("Couldn't find assembly named " + assemblyName);
                     return null;
                 }
+
+                ModuleDefinition module = assembly.MainModule;
 
                 TypeDefinition typeToAdd = module.Types.FirstOrDefault(t => t.Name == classToAddName);
 
@@ -344,6 +329,21 @@ namespace PhiPatcher
             }
 
             return instr;
+        }
+
+        public XmlDocument LoadModifications(string path)
+        {
+            /**
+             * We load the file containing the modifications to patch
+             * in the assembly
+             */
+            var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(path);
+            StreamReader reader = new StreamReader(stream);
+
+            XmlDocument modif = new XmlDocument();
+            modif.LoadXml(reader.ReadToEnd());
+
+            return modif;
         }
 
         static void Main()
