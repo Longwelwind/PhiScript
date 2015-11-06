@@ -26,7 +26,6 @@ namespace PhiPatcher
         private XElement mXElement;
 
         private AssemblyDefinition mCSharpAssembly;
-        private ModuleDefinition mCSharpModule;
 
         public void Run()
         {
@@ -126,11 +125,11 @@ namespace PhiPatcher
 
         public void PatchModifications()
         {
-            foreach (XElement classNode in mPatches.Elements("Class"))
+            foreach (XElement classNode in mXElement.Elements("Class"))
             {
                 // We load the class in which the modifications will take place
                 string nameTypeToPatch = classNode.Attribute("Name").Value;
-                TypeDefinition typeToPatch = mCSharpModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
+                TypeDefinition typeToPatch = mCSharpAssembly.MainModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
 
                 if (typeToPatch == null)
                 {
@@ -179,7 +178,7 @@ namespace PhiPatcher
                     {
                         string tempVariable = methodNode.Attribute("TempVariable").Value;
 
-                        methodBody.Variables.Add(new VariableDefinition(mCSharpModule.Import(Type.GetType(tempVariable))));
+                        methodBody.Variables.Add(new VariableDefinition(mCSharpAssembly.MainModule.Import(Type.GetType(tempVariable))));
                     }
 
 
