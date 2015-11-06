@@ -27,8 +27,8 @@ namespace PhiScript.Event
 
         public EventGui(GuiMenu guiMenu, GuiType guiType)
         {
-            this.GuiMenu = guiMenu;
-            this.Type = guiType;
+            GuiMenu = guiMenu;
+            Type = guiType;
         }
     }
 }
