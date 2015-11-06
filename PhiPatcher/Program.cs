@@ -49,6 +49,8 @@ namespace PhiPatcher
             {
                 return;
             }
+
+            _cSharpModule = _cSharpAssembly.MainModule;
             
             /**
              * We launch the patching
@@ -177,6 +179,9 @@ namespace PhiPatcher
 
                     if (methodNode.Attributes["TempVariable"] != null)
                     {
+                        // TODO: Make it work
+                        continue;
+
                         string tempVariable = methodNode.Attributes["TempVariable"].Value;
 
                         methodBody.Variables.Add(new VariableDefinition(_cSharpModule.Import(Type.GetType(tempVariable))));
