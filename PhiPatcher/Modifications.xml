@@ -10,60 +10,62 @@
   </Class>
   <Class Name="GuiMenuSystem">
     <Method Name="init">
-      <Instruction OpCode="Ldarg_0" />
+      <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuild" />
       <Instruction OpCode="Ldc.I4" Value="2" />
       <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     
-      <Instruction OpCode="Ldarg_0" />
+      <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuildExterior" />
       <Instruction OpCode="Ldc.I4" Value="4" />
       <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     
-      <Instruction OpCode="Ldarg_0" />
+      <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuildInterior" />
       <Instruction OpCode="Ldc.I4" Value="3" />
       <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     
-      <Instruction OpCode="Ldarg_0" />
+      <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Ldfld" Field="mMenuSpeed" />
       <Instruction OpCode="Ldc.I4" Value="5" />
       <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     </Method>
     <Method Name="setActionMenu">
-      <Instruction OpCode="Ldarg_0" />
+      <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Ldfld" Field="mMenuAction" />
       <Instruction OpCode="Ldc.I4" Value="6" />
       <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     </Method>
   </Class>
   <Class Name="ConstructionComponent">
-    <Method Name="canProduce" Location="0" TempVariable="System.Nullable`1[[System.Boolean, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-      <Instruction OpCode="Ldarg_0" />
+    <Method Name="canProduce" Location="0">
+      <Variable Assembly="Assembly-CSharp" Name="temp" Type="System.Nullable`1[[System.Boolean]]" />
+      <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Call" Assembly="PhiScript" Class="ConstructionComponentManager" Method="OnCanProduce" />
-      <Instruction OpCode="Stloc_S" Value="8" />
-      <Instruction OpCode="Ldloc_S" Value="8" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="HasValue" />
-      <Instruction OpCode="Brfalse_S" />
-      <Instruction OpCode="Ldloc_S" Value="8" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="GetValue" />
+      <Instruction OpCode="Stloc.S" Value="8" />
+      <Instruction OpCode="Ldloc.S" Value="8" />
+      <Instruction OpCode="Call.Generic" Assembly="Assembly-CSharp" GenericType="System.Nullable`1" Type="System.Boolean" Method="get_HasValue" />
+      <Instruction OpCode="Brfalse.S" />
+      <Instruction OpCode="Ldloc.S" Value="8" />
+      <Instruction OpCode="Call.Generic" Assembly="Assembly-CSharp" GenericType="System.Nullable`1" Type="System.Boolean" Method="get_Value" ReturnType="System.Boolean" />
       <Instruction OpCode="Ret" />
     </Method>
     <Method Name="completeProduction" Location="0">
-      <Instruction OpCode="Ldarg_0" />
+      <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Call" Assembly="PhiScript" Class="ConstructionComponentManager" Method="OnCompleteProduction" />
-      <Instruction OpCode="Brfalse_S" />
+      <Instruction OpCode="Brfalse.S" />
       <Instruction OpCode="Ret" />
     </Method>
-    <Method Name="getNeededResources" Location="0" TempVariable="System.Collections.Generic.List`1[[Planetbase.ResourceType, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
-      <Instruction OpCode="Ldarg_0" />
+    <Method Name="getNeededResources" Location="0">
+      <Variable Assembly="Assembly-CSharp" Name="temp" Type="System.Collections.Generic.List`1[[Planetbase.ResourceType]]" />
+      <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Call" Assembly="PhiScript" Class="ConstructionComponentManager" Method="OnNeededResources" />
-      <Instruction OpCode="Stloc_S" Value="4" />
-      <Instruction OpCode="Ldloc_S" Value="4" />
+      <Instruction OpCode="Stloc.S" Value="4" />
+      <Instruction OpCode="Ldloc.S" Value="4" />
       <Instruction OpCode="Ldnull" />
       <Instruction OpCode="Ceq" />
-      <Instruction OpCode="Brtrue_S" />
-      <Instruction OpCode="Ldloc_S" Value="4" />
+      <Instruction OpCode="Brtrue.S" />
+      <Instruction OpCode="Ldloc.S" Value="4" />
       <Instruction OpCode="Ret" />
     </Method>
   </Class>

@@ -83,20 +83,14 @@ namespace PhiPatcher
             {
                 return mLoadedAssemblies[name];
             }
-            else
-            {
-                AssemblyDefinition assembly = LoadAssembly(name);
+            AssemblyDefinition assembly = LoadAssembly(name);
 
-                if (assembly != null)
-                {
-                    mLoadedAssemblies.Add(name, assembly);
-                    return assembly;
-                }
-                else
-                {
-                    return null;
-                }
+            if (assembly != null)
+            {
+                mLoadedAssemblies.Add(name, assembly);
+                return assembly;
             }
+            return null;
         }
 
         public AssemblyDefinition LoadAssembly(string path)
@@ -174,18 +168,23 @@ namespace PhiPatcher
                         }
                     }
 
-                    if (methodNode.Attribute("TempVariable") != null)
-                    {
-                        string tempVariable = methodNode.Attribute("TempVariable").Value;
-
-                        methodBody.Variables.Add(new VariableDefinition(mCSharpAssembly.MainModule.Import(Type.GetType(tempVariable))));
-                    }
-
-
                     Instruction locationInstr = methodToPatch.Body.Instructions.ElementAt(indexBegin);
                     Instruction prevInstr = locationInstr.Previous;
 
-                    foreach (XElement instrNode in methodNode.Descendants())
+                    foreach (XElement variableNode in methodNode.Elements("Variable"))
+                    {
+                        string variableName = variableNode.Attribute("Name").Value;
+                        string variableType = variableNode.Attribute("Type").Value;
+                        string assemblyName = variableNode.Attribute("Assembly").Value;
+
+                        AssemblyDefinition assembly = GetAssembly(assemblyName + ".dll");
+                        TypeReference typeReference = assembly.MainModule.GetType(variableType, true);
+                        VariableDefinition variableDefinition = new VariableDefinition(variableName, typeReference);
+
+                        methodBody.Variables.Add(variableDefinition);
+                    }
+
+                    foreach (XElement instrNode in methodNode.Elements("Instruction"))
                     {
                         Instruction instr = ParseInstruction(processor, methodBody, typeToPatch, instrNode, locationInstr);
 
@@ -210,8 +209,6 @@ namespace PhiPatcher
 
         public Instruction ParseInstruction(ILProcessor processor, MethodBody methodBody, TypeDefinition type, XElement instrXml, Instruction locationInstr)
         {
-            Instruction instr = null;
-
             string nameOpCode = instrXml.Attribute("OpCode").Value;
 
             if (nameOpCode == "Call")
@@ -219,8 +216,6 @@ namespace PhiPatcher
                 string assemblyName = instrXml.Attribute("Assembly").Value;
                 string classToAddName = instrXml.Attribute("Class").Value;
                 string methodToAddName = instrXml.Attribute("Method").Value;
-
-                
 
                 // We search in which assembly should we pull the method
                 AssemblyDefinition assembly = GetAssembly(assemblyName + ".dll");
@@ -250,14 +245,45 @@ namespace PhiPatcher
 
                 MethodReference methodToAddImported = mCSharpAssembly.MainModule.Import(methodToAdd);
 
-                instr = processor.Create(OpCodes.Call, methodToAddImported);
+                return processor.Create(OpCodes.Call, methodToAddImported);
             }
-            else if (nameOpCode == "Ldc.I4")
+            if (nameOpCode == "Call.Generic")
+            {
+                string assemblyName = instrXml.Attribute("Assembly").Value;
+                string genericTypeName = instrXml.Attribute("GenericType").Value;
+                string typeName = instrXml.Attribute("Type").Value;
+                string methodName = instrXml.Attribute("Method").Value;
+
+                // We search in which assembly should we pull the method
+                AssemblyDefinition assemblyDefinition = GetAssembly(assemblyName + ".dll");
+
+                if (assemblyDefinition == null)
+                    return null;
+
+                ModuleDefinition moduleDefinition = assemblyDefinition.MainModule;
+                TypeReference typeReference = moduleDefinition.GetType(typeName, true);
+                TypeReference genericTypeReference = moduleDefinition.GetType(genericTypeName, true).MakeGenericInstanceType(typeReference);
+                TypeDefinition typeDefinition = genericTypeReference.Resolve();
+
+                MethodDefinition methodDefinition = typeDefinition.Methods.Single(m => m.Name == methodName);
+                MethodReference methodReference = moduleDefinition.Import(methodDefinition);
+
+                if (instrXml.Attribute("ReturnType") != null)
+                {
+                    string returnType = instrXml.Attribute("ReturnType").Value;
+
+                    TypeReference returnTypeReference = moduleDefinition.GetType(returnType, true);
+                    methodReference.ReturnType = returnTypeReference;
+                }
+
+                return processor.Create(OpCodes.Call, methodReference);
+            }
+            if (nameOpCode == "Ldc.I4")
             {
                 int value = Int32.Parse(instrXml.Attribute("Value").Value);
-                instr = processor.Create(OpCodes.Ldc_I4, value);
+                return processor.Create(OpCodes.Ldc_I4, value);
             }
-            else if (nameOpCode == "Ldfld")
+            if (nameOpCode == "Ldfld")
             {
                 string fieldName = instrXml.Attribute("Field").Value;
                 FieldDefinition field = type.Fields.FirstOrDefault(f => f.Name == fieldName);
@@ -267,31 +293,31 @@ namespace PhiPatcher
                     Console.WriteLine("Couldn't find field named " + fieldName);
                 }
 
-                instr = processor.Create(OpCodes.Ldfld, field);
+                return processor.Create(OpCodes.Ldfld, field);
             }
-            else if (nameOpCode == "Ldarg_0")
+            if (nameOpCode == "Ldarg.0")
             {
-                instr = processor.Create(OpCodes.Ldarg_0);
+                return processor.Create(OpCodes.Ldarg_0);
             }
-            else if (nameOpCode == "Stloc_0")
+            if (nameOpCode == "Stloc.0")
             {
-                instr = processor.Create(OpCodes.Stloc_0);
+                return processor.Create(OpCodes.Stloc_0);
             }
-            else if (nameOpCode == "Ldloc_0")
+            if (nameOpCode == "Ldloc.0")
             {
-                instr = processor.Create(OpCodes.Ldloc_0);
+                return processor.Create(OpCodes.Ldloc_0);
             }
-            else if (nameOpCode == "Stloc_S")
-            {
-                int value = Int32.Parse(instrXml.Attribute("Value").Value);
-                instr = processor.Create(OpCodes.Stloc_S, methodBody.Variables[value]);
-            }
-            else if (nameOpCode == "Ldloc_S")
+            if (nameOpCode == "Stloc.S")
             {
                 int value = Int32.Parse(instrXml.Attribute("Value").Value);
-                instr = processor.Create(OpCodes.Ldloc_S, methodBody.Variables[value]);
+                return processor.Create(OpCodes.Stloc_S, methodBody.Variables[value]);
             }
-            else if (nameOpCode == "Brtrue_S")
+            if (nameOpCode == "Ldloc.S")
+            {
+                int value = Int32.Parse(instrXml.Attribute("Value").Value);
+                return processor.Create(OpCodes.Ldloc_S, methodBody.Variables[value]);
+            }
+            if (nameOpCode == "Brtrue.S")
             {
                 Instruction target = locationInstr;
                 if (instrXml.Attribute("Value") != null)
@@ -299,9 +325,9 @@ namespace PhiPatcher
                     
                 }
 
-                instr = processor.Create(OpCodes.Brtrue_S, target);
+                return processor.Create(OpCodes.Brtrue_S, target);
             }
-            else if (nameOpCode == "Brfalse_S")
+            if (nameOpCode == "Brfalse.S")
             {
                 Instruction target = locationInstr;
                 if (instrXml.Attribute("Value") != null)
@@ -309,26 +335,23 @@ namespace PhiPatcher
 
                 }
 
-                instr = processor.Create(OpCodes.Brfalse_S, target);
+                return processor.Create(OpCodes.Brfalse_S, target);
             }
-            else if (nameOpCode == "Ret")
+            if (nameOpCode == "Ret")
             {
-                instr = processor.Create(OpCodes.Ret);
+                return processor.Create(OpCodes.Ret);
             }
-            else if (nameOpCode == "Ldnull")
+            if (nameOpCode == "Ldnull")
             {
-                instr = processor.Create(OpCodes.Ldnull);
+                return processor.Create(OpCodes.Ldnull);
             }
-            else if (nameOpCode == "Ceq")
+            if (nameOpCode == "Ceq")
             {
-                instr = processor.Create(OpCodes.Ceq);
-            }
-            else
-            {
-                Console.WriteLine("Couldn't find OpCode named " + nameOpCode);
+                return processor.Create(OpCodes.Ceq);
             }
 
-            return instr;
+            Console.WriteLine("Couldn't find OpCode named " + nameOpCode);
+            return null;
         }
 
         public XElement LoadModifications(string path)
