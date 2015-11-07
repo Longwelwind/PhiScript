@@ -129,16 +129,6 @@ namespace PhiScript
 
             Instance.Launch();
         }
-
-        public static bool HasValue(bool? input)
-        {
-            return input.HasValue;
-        }
-
-        public static bool GetValue(bool? input)
-        {
-            return input.Value;
-        }
     }
 
     public abstract class Mod
