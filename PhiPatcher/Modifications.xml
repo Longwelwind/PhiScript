@@ -37,6 +37,7 @@
       <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     </Method>
   </Class>
+  <!--
   <Class Name="ConstructionComponent">
     <Method Name="canProduce" Location="0">
       <Variable Assembly="Assembly-CSharp" Name="temp" Type="System.Nullable`1[[System.Boolean]]" />
@@ -69,6 +70,7 @@
       <Instruction OpCode="Ret" />
     </Method>
   </Class>
+  -->
   <Class Name="LandingShipManager">
     <Method Name="tick" Location="93" DeleteCount="1">
       <Instruction OpCode="Ldc.I4" Value="161803" />
