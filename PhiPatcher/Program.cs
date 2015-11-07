@@ -8,7 +8,6 @@ using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Collections.Generic;
-using System.Xml;
 
 namespace PhiPatcher
 {
