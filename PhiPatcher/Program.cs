@@ -8,6 +8,8 @@ using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 using System.Collections.Generic;
+using System.Diagnostics;
+using PhiPatcher.Instructions;
 
 namespace PhiPatcher
 {
@@ -18,19 +20,22 @@ namespace PhiPatcher
         private const string AssemblyPath = "Assembly-CSharp.dll";
         private const string MovedAssemblyPath = "Assembly-CSharp.original.dll";
 
-        private Dictionary<string, AssemblyDefinition> mLoadedAssemblies = new Dictionary<string, AssemblyDefinition>();
+        private static Dictionary<string, AssemblyDefinition> mLoadedAssemblies = new Dictionary<string, AssemblyDefinition>();
 
         private bool mAlreadyPatched;
 
-        private XElement mXElement;
-
-        private AssemblyDefinition mCSharpAssembly;
+        private XElement mModifications;
 
         public void Run()
         {
             /**
              * We check if the assembly has already been patched
              */
+
+            Debug.WriteLine(typeof(PhiScript.Phi));
+            Debug.WriteLine(typeof(PhiScript.Manager.GuiManager));
+            Debug.WriteLine(typeof(PhiScript.Manager.ConstructionComponentManager));
+
             mAlreadyPatched = File.Exists(MovedAssemblyPath);
 
             if (mAlreadyPatched)
@@ -40,20 +45,31 @@ namespace PhiPatcher
             }
 
             /**
-             * We load the target assembly
+             * We load necessary assemblies
              */
             string assemblyPath = mAlreadyPatched ? MovedAssemblyPath : AssemblyPath;
-            mCSharpAssembly = GetAssembly(assemblyPath);
 
-            if (mCSharpAssembly == null)
+            var cSharpAssembly = LoadAssembly(assemblyPath);
+            var phiScript = LoadAssembly("PhiScript.dll");
+
+            if (cSharpAssembly == null || phiScript == null)
             {
+                Console.Read();
                 return;
             }
+
+            var coreLibrary =
+                cSharpAssembly.MainModule.AssemblyResolver.Resolve(
+                    (AssemblyNameReference) cSharpAssembly.MainModule.TypeSystem.CoreLibrary);
+
+            mLoadedAssemblies.Add("Assembly-CSharp", cSharpAssembly);
+            mLoadedAssemblies.Add("PhiScript", phiScript);
+            mLoadedAssemblies.Add("CoreLibrary", coreLibrary);
 
             /**
              * We launch the patching
              */
-            mXElement = LoadModifications(ModificationsXmlPath);
+            mModifications = LoadModifications(ModificationsXmlPath);
             
             PatchModifications();
 
@@ -68,7 +84,7 @@ namespace PhiPatcher
 
             Console.WriteLine("Writing the new Assembly in " + AssemblyPath);
 
-            mCSharpAssembly.Write(AssemblyPath);
+            GetAssembly("Assembly-CSharp").Write(AssemblyPath);
 
             Console.WriteLine("Finished Writing");
 
@@ -76,7 +92,7 @@ namespace PhiPatcher
             Console.Read();
         }
 
-        public AssemblyDefinition GetAssembly(string name)
+        public static AssemblyDefinition GetAssembly(string name)
         {
             if (mLoadedAssemblies.ContainsKey(name))
             {
@@ -92,8 +108,11 @@ namespace PhiPatcher
             return null;
         }
 
-        public AssemblyDefinition LoadAssembly(string path)
+        public static AssemblyDefinition LoadAssembly(string path)
         {
+            if (!path.EndsWith(".dll"))
+                path += ".dll";
+
             if (File.Exists(path))
             {
                 try
@@ -118,11 +137,11 @@ namespace PhiPatcher
 
         public void PatchModifications()
         {
-            foreach (XElement classNode in mXElement.Elements("Class"))
+            foreach (XElement classNode in mModifications.Elements("Class"))
             {
                 // We load the class in which the modifications will take place
                 string nameTypeToPatch = classNode.Attribute("Name").Value;
-                TypeDefinition typeToPatch = mCSharpAssembly.MainModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
+                TypeDefinition typeToPatch = GetAssembly("Assembly-CSharp").MainModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
 
                 if (typeToPatch == null)
                 {
@@ -176,8 +195,30 @@ namespace PhiPatcher
                         string variableType = variableNode.Attribute("Type").Value;
                         string assemblyName = variableNode.Attribute("Assembly").Value;
 
-                        AssemblyDefinition assembly = GetAssembly(assemblyName + ".dll");
-                        TypeReference typeReference = assembly.MainModule.GetType(variableType, true);
+                        AssemblyDefinition assembly = GetAssembly(assemblyName);
+                        TypeDefinition typeDefinition = assembly.MainModule.GetType(variableType);
+                        TypeReference typeReference = GetAssembly("Assembly-CSharp").MainModule.ImportReference(typeDefinition);
+
+                        if (variableNode.HasElements)
+                        {
+                            List<TypeReference> genericParameters = new List<TypeReference>();
+
+                            foreach (XElement genericParameter in variableNode.Elements("GenericParameter"))
+                            {
+                                var gPAssemblyName = genericParameter.Attribute("Assembly").Value;
+                                var gPType = genericParameter.Attribute("Type").Value;
+
+                                AssemblyDefinition gPAssembly = GetAssembly(gPAssemblyName);
+                                TypeDefinition gPTypeDefinition = gPAssembly.MainModule.GetType(gPType);
+                                TypeReference gPTypeReference =
+                                    GetAssembly("Assembly-CSharp").MainModule.ImportReference(gPTypeDefinition);
+
+                                genericParameters.Add(gPTypeReference);
+                            }
+
+                            typeReference = typeReference.MakeGenericInstanceType(genericParameters.ToArray());
+                        }
+
                         VariableDefinition variableDefinition = new VariableDefinition(variableName, typeReference);
 
                         methodBody.Variables.Add(variableDefinition);
@@ -185,7 +226,7 @@ namespace PhiPatcher
 
                     foreach (XElement instrNode in methodNode.Elements("Instruction"))
                     {
-                        Instruction instr = ParseInstruction(processor, methodBody, typeToPatch, instrNode, locationInstr);
+                        Instruction instr = InstructionBuilder.Build(processor, typeToPatch, instrNode);
 
                         if (instr == null)
                         {
@@ -217,7 +258,7 @@ namespace PhiPatcher
                 string methodToAddName = instrXml.Attribute("Method").Value;
 
                 // We search in which assembly should we pull the method
-                AssemblyDefinition assembly = GetAssembly(assemblyName + ".dll");
+                AssemblyDefinition assembly = GetAssembly(assemblyName);
 
                 if (assembly == null)
                 {
@@ -242,7 +283,7 @@ namespace PhiPatcher
                     return null;
                 }
 
-                MethodReference methodToAddImported = mCSharpAssembly.MainModule.Import(methodToAdd);
+                MethodReference methodToAddImported = GetAssembly("Assembly-CSharp").MainModule.ImportReference(methodToAdd);
 
                 return processor.Create(OpCodes.Call, methodToAddImported);
             }
@@ -254,7 +295,7 @@ namespace PhiPatcher
                 string methodName = instrXml.Attribute("Method").Value;
 
                 // We search in which assembly should we pull the method
-                AssemblyDefinition assemblyDefinition = GetAssembly(assemblyName + ".dll");
+                AssemblyDefinition assemblyDefinition = GetAssembly(assemblyName);
 
                 if (assemblyDefinition == null)
                     return null;
@@ -265,7 +306,7 @@ namespace PhiPatcher
                 TypeDefinition typeDefinition = genericTypeReference.Resolve();
 
                 MethodDefinition methodDefinition = typeDefinition.Methods.Single(m => m.Name == methodName);
-                MethodReference methodReference = moduleDefinition.Import(methodDefinition);
+                MethodReference methodReference = moduleDefinition.ImportReference(methodDefinition);
 
                 if (instrXml.Attribute("ReturnType") != null)
                 {

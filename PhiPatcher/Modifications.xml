@@ -37,15 +37,18 @@
       <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
     </Method>
   </Class>
-  <!--
   <Class Name="ConstructionComponent">
     <Method Name="canProduce" Location="0">
-      <Variable Assembly="Assembly-CSharp" Name="temp" Type="System.Nullable`1[[System.Boolean]]" />
+      <Variable Assembly="CoreLibrary" Name="temp" Type="System.Nullable`1">
+        <GenericParameter Assembly="CoreLibrary" Type="System.Boolean" />
+      </Variable>
       <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Call" Assembly="PhiScript" Class="ConstructionComponentManager" Method="OnCanProduce" />
       <Instruction OpCode="Stloc.S" Value="8" />
       <Instruction OpCode="Ldloc.S" Value="8" />
-      <Instruction OpCode="Call.Generic" Assembly="Assembly-CSharp" GenericType="System.Nullable`1" Type="System.Boolean" Method="get_HasValue" />
+      <Instruction OpCode="Call" Assembly="Assembly-CSharp" Type="System.Nullable`1" Method="get_HasValue">
+        <GenericParameter Assembly="CoreLibrary" Type="System.Boolean" />
+      </Instruction>
       <Instruction OpCode="Brfalse.S" />
       <Instruction OpCode="Ldloc.S" Value="8" />
       <Instruction OpCode="Call.Generic" Assembly="Assembly-CSharp" GenericType="System.Nullable`1" Type="System.Boolean" Method="get_Value" ReturnType="System.Boolean" />
@@ -58,7 +61,9 @@
       <Instruction OpCode="Ret" />
     </Method>
     <Method Name="getNeededResources" Location="0">
-      <Variable Assembly="Assembly-CSharp" Name="temp" Type="System.Collections.Generic.List`1[[Planetbase.ResourceType]]" />
+      <Variable Assembly="CoreLibrary" Name="temp" Type="System.Collections.Generic.List`1">
+        <GenericParameter Assembly="Assembly-CSharp" Type="Planetbase.ResourceType" />
+      </Variable>
       <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Call" Assembly="PhiScript" Class="ConstructionComponentManager" Method="OnNeededResources" />
       <Instruction OpCode="Stloc.S" Value="4" />
@@ -70,7 +75,6 @@
       <Instruction OpCode="Ret" />
     </Method>
   </Class>
-  -->
   <Class Name="LandingShipManager">
     <Method Name="tick" Location="93" DeleteCount="1">
       <Instruction OpCode="Ldc.I4" Value="161803" />
