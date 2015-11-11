@@ -1,19 +1,18 @@
-﻿using System;
+﻿using Mono.Cecil;
+using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Xml.Linq;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
-using Mono.Cecil.Rocks;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
-using System.Collections.Generic;
-using System.Diagnostics;
-using PhiPatcher.Instructions;
 
 namespace PhiPatcher
 {
-    class Program
+    internal class Program
     {
         private const string ModificationsXmlPath = "PhiPatcher.Modifications.xml";
 
@@ -31,10 +30,6 @@ namespace PhiPatcher
             /**
              * We check if the assembly has already been patched
              */
-
-            Debug.WriteLine(typeof(PhiScript.Phi));
-            Debug.WriteLine(typeof(PhiScript.Manager.GuiManager));
-            Debug.WriteLine(typeof(PhiScript.Manager.ConstructionComponentManager));
 
             mAlreadyPatched = File.Exists(MovedAssemblyPath);
 
@@ -60,7 +55,7 @@ namespace PhiPatcher
 
             var coreLibrary =
                 cSharpAssembly.MainModule.AssemblyResolver.Resolve(
-                    (AssemblyNameReference) cSharpAssembly.MainModule.TypeSystem.CoreLibrary);
+                    (AssemblyNameReference)cSharpAssembly.MainModule.TypeSystem.CoreLibrary);
 
             mLoadedAssemblies.Add("Assembly-CSharp", cSharpAssembly);
             mLoadedAssemblies.Add("PhiScript", phiScript);
@@ -70,7 +65,7 @@ namespace PhiPatcher
              * We launch the patching
              */
             mModifications = LoadModifications(ModificationsXmlPath);
-            
+
             PatchModifications();
 
             /**
@@ -180,7 +175,7 @@ namespace PhiPatcher
                     {
                         int countInstrToDelete = int.Parse(methodNode.Attribute("DeleteCount").Value);
 
-                        for (int i = 0;i < countInstrToDelete;i++)
+                        for (int i = 0; i < countInstrToDelete; i++)
                         {
                             processor.Remove(methodToPatch.Body.Instructions.ElementAt(indexBegin));
                         }
@@ -241,157 +236,10 @@ namespace PhiPatcher
                         prevInstr = instr;
                     }
 
-					// Optimize the method
-					methodToPatch.Body.OptimizeMacros();
+                    // Optimize the method
+                    methodToPatch.Body.OptimizeMacros();
                 }
             }
-        }
-
-        public Instruction ParseInstruction(ILProcessor processor, MethodBody methodBody, TypeDefinition type, XElement instrXml, Instruction locationInstr)
-        {
-            string nameOpCode = instrXml.Attribute("OpCode").Value;
-
-            if (nameOpCode == "Call")
-            {
-                string assemblyName = instrXml.Attribute("Assembly").Value;
-                string classToAddName = instrXml.Attribute("Class").Value;
-                string methodToAddName = instrXml.Attribute("Method").Value;
-
-                // We search in which assembly should we pull the method
-                AssemblyDefinition assembly = GetAssembly(assemblyName);
-
-                if (assembly == null)
-                {
-                    return null;
-                }
-
-                ModuleDefinition module = assembly.MainModule;
-
-                TypeDefinition typeToAdd = module.Types.FirstOrDefault(t => t.Name == classToAddName);
-
-                if (typeToAdd == null)
-                {
-                    Console.WriteLine("Couldn't find type/class named " + classToAddName);
-                    return null;
-                }
-
-                MethodDefinition methodToAdd = typeToAdd.Methods.FirstOrDefault(m => m.Name == methodToAddName);
-
-                if (methodToAdd == null)
-                {
-                    Console.WriteLine("Couldn't find method named " + methodToAddName);
-                    return null;
-                }
-
-                MethodReference methodToAddImported = GetAssembly("Assembly-CSharp").MainModule.ImportReference(methodToAdd);
-
-                return processor.Create(OpCodes.Call, methodToAddImported);
-            }
-            if (nameOpCode == "Call.Generic")
-            {
-                string assemblyName = instrXml.Attribute("Assembly").Value;
-                string genericTypeName = instrXml.Attribute("GenericType").Value;
-                string typeName = instrXml.Attribute("Type").Value;
-                string methodName = instrXml.Attribute("Method").Value;
-
-                // We search in which assembly should we pull the method
-                AssemblyDefinition assemblyDefinition = GetAssembly(assemblyName);
-
-                if (assemblyDefinition == null)
-                    return null;
-
-                ModuleDefinition moduleDefinition = assemblyDefinition.MainModule;
-                TypeReference typeReference = moduleDefinition.GetType(typeName, true);
-                TypeReference genericTypeReference = moduleDefinition.GetType(genericTypeName, true).MakeGenericInstanceType(typeReference);
-                TypeDefinition typeDefinition = genericTypeReference.Resolve();
-
-                MethodDefinition methodDefinition = typeDefinition.Methods.Single(m => m.Name == methodName);
-                MethodReference methodReference = moduleDefinition.ImportReference(methodDefinition);
-
-                if (instrXml.Attribute("ReturnType") != null)
-                {
-                    string returnType = instrXml.Attribute("ReturnType").Value;
-
-                    TypeReference returnTypeReference = moduleDefinition.GetType(returnType, true);
-                    methodReference.ReturnType = returnTypeReference;
-                }
-
-                return processor.Create(OpCodes.Call, methodReference);
-            }
-            if (nameOpCode == "Ldc.I4")
-            {
-                int value = Int32.Parse(instrXml.Attribute("Value").Value);
-                return processor.Create(OpCodes.Ldc_I4, value);
-            }
-            if (nameOpCode == "Ldfld")
-            {
-                string fieldName = instrXml.Attribute("Field").Value;
-                FieldDefinition field = type.Fields.FirstOrDefault(f => f.Name == fieldName);
-
-                if (field == null)
-                {
-                    Console.WriteLine("Couldn't find field named " + fieldName);
-                }
-
-                return processor.Create(OpCodes.Ldfld, field);
-            }
-            if (nameOpCode == "Ldarg.0")
-            {
-                return processor.Create(OpCodes.Ldarg_0);
-            }
-            if (nameOpCode == "Stloc.0")
-            {
-                return processor.Create(OpCodes.Stloc_0);
-            }
-            if (nameOpCode == "Ldloc.0")
-            {
-                return processor.Create(OpCodes.Ldloc_0);
-            }
-            if (nameOpCode == "Stloc.S")
-            {
-                int value = Int32.Parse(instrXml.Attribute("Value").Value);
-                return processor.Create(OpCodes.Stloc_S, methodBody.Variables[value]);
-            }
-            if (nameOpCode == "Ldloc.S")
-            {
-                int value = Int32.Parse(instrXml.Attribute("Value").Value);
-                return processor.Create(OpCodes.Ldloc_S, methodBody.Variables[value]);
-            }
-            if (nameOpCode == "Brtrue.S")
-            {
-                Instruction target = locationInstr;
-                if (instrXml.Attribute("Value") != null)
-                {
-                    
-                }
-
-                return processor.Create(OpCodes.Brtrue_S, target);
-            }
-            if (nameOpCode == "Brfalse.S")
-            {
-                Instruction target = locationInstr;
-                if (instrXml.Attribute("Value") != null)
-                {
-
-                }
-
-                return processor.Create(OpCodes.Brfalse_S, target);
-            }
-            if (nameOpCode == "Ret")
-            {
-                return processor.Create(OpCodes.Ret);
-            }
-            if (nameOpCode == "Ldnull")
-            {
-                return processor.Create(OpCodes.Ldnull);
-            }
-            if (nameOpCode == "Ceq")
-            {
-                return processor.Create(OpCodes.Ceq);
-            }
-
-            Console.WriteLine("Couldn't find OpCode named " + nameOpCode);
-            return null;
         }
 
         public XElement LoadModifications(string path)
@@ -404,7 +252,7 @@ namespace PhiPatcher
             return XElement.Load(stream);
         }
 
-        static void Main()
+        private static void Main()
         {
             Program program = new Program();
 

@@ -2,10 +2,10 @@
 <Modifications>
   <Class Name="GameManager">
     <Method Name=".ctor">
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="StaticLaunch" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Type="PhiScript.Phi" Method="StaticLaunch" />
     </Method>
     <Method Name="update">
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="Phi" Method="OnTick" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Type="PhiScript.Phi" Method="OnTick" />
     </Method>
   </Class>
   <Class Name="GuiMenuSystem">
@@ -13,28 +13,28 @@
       <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuild" />
       <Instruction OpCode="Ldc.I4" Value="2" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Type="PhiScript.Manager.GuiManager" Method="OnGuiCreation" />
     
       <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuildExterior" />
       <Instruction OpCode="Ldc.I4" Value="4" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Type="PhiScript.Manager.GuiManager" Method="OnGuiCreation" />
     
       <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Ldfld" Field="mMenuBuildInterior" />
       <Instruction OpCode="Ldc.I4" Value="3" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Type="PhiScript.Manager.GuiManager" Method="OnGuiCreation" />
     
       <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Ldfld" Field="mMenuSpeed" />
       <Instruction OpCode="Ldc.I4" Value="5" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Type="PhiScript.Manager.GuiManager" Method="OnGuiCreation" />
     </Method>
     <Method Name="setActionMenu">
       <Instruction OpCode="Ldarg.0" />
       <Instruction OpCode="Ldfld" Field="mMenuAction" />
       <Instruction OpCode="Ldc.I4" Value="6" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="GuiManager" Method="OnGuiCreation" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Type="PhiScript.Manager.GuiManager" Method="OnGuiCreation" />
     </Method>
   </Class>
   <Class Name="ConstructionComponent">
@@ -43,21 +43,23 @@
         <GenericParameter Assembly="CoreLibrary" Type="System.Boolean" />
       </Variable>
       <Instruction OpCode="Ldarg.0" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="ConstructionComponentManager" Method="OnCanProduce" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Type="PhiScript.Manager.ConstructionComponentManager" Method="OnCanProduce" />
       <Instruction OpCode="Stloc.S" Value="8" />
       <Instruction OpCode="Ldloc.S" Value="8" />
-      <Instruction OpCode="Call" Assembly="Assembly-CSharp" Type="System.Nullable`1" Method="get_HasValue">
+      <Instruction OpCode="Call" Assembly="CoreLibrary" Type="System.Nullable`1" Method="get_HasValue">
         <GenericParameter Assembly="CoreLibrary" Type="System.Boolean" />
       </Instruction>
-      <Instruction OpCode="Brfalse.S" />
+      <Instruction OpCode="Brfalse.S" Value="5"/>
       <Instruction OpCode="Ldloc.S" Value="8" />
-      <Instruction OpCode="Call.Generic" Assembly="Assembly-CSharp" GenericType="System.Nullable`1" Type="System.Boolean" Method="get_Value" ReturnType="System.Boolean" />
+      <Instruction OpCode="Call" Assembly="CoreLibrary" Type="System.Nullable`1" Method="get_Value">
+        <GenericParameter Assembly="CoreLibrary" Type="System.Boolean" />
+      </Instruction>
       <Instruction OpCode="Ret" />
     </Method>
     <Method Name="completeProduction" Location="0">
       <Instruction OpCode="Ldarg.0" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="ConstructionComponentManager" Method="OnCompleteProduction" />
-      <Instruction OpCode="Brfalse.S" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Type="PhiScript.Manager.ConstructionComponentManager" Method="OnCompleteProduction" />
+      <Instruction OpCode="Brfalse.S" Value="2"/>
       <Instruction OpCode="Ret" />
     </Method>
     <Method Name="getNeededResources" Location="0">
@@ -65,12 +67,12 @@
         <GenericParameter Assembly="Assembly-CSharp" Type="Planetbase.ResourceType" />
       </Variable>
       <Instruction OpCode="Ldarg.0" />
-      <Instruction OpCode="Call" Assembly="PhiScript" Class="ConstructionComponentManager" Method="OnNeededResources" />
+      <Instruction OpCode="Call" Assembly="PhiScript" Type="PhiScript.Manager.ConstructionComponentManager" Method="OnNeededResources" />
       <Instruction OpCode="Stloc.S" Value="4" />
       <Instruction OpCode="Ldloc.S" Value="4" />
       <Instruction OpCode="Ldnull" />
       <Instruction OpCode="Ceq" />
-      <Instruction OpCode="Brtrue.S" />
+      <Instruction OpCode="Brtrue.S" Value ="6"/>
       <Instruction OpCode="Ldloc.S" Value="4" />
       <Instruction OpCode="Ret" />
     </Method>

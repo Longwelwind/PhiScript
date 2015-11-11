@@ -17,9 +17,34 @@ namespace PhiPatcher
 
             switch (opCode)
             {
+                case "Brfalse.S":
+                    return Instructions.Brfalse_S.ParseInstruction(processor, type, instrXML);
+                case "Brtrue.S":
+                    return Instructions.Brtrue_S.ParseInstruction(processor, type, instrXML);
                 case "Call":
                     return Instructions.Call.ParseInstruction(processor, type, instrXML);
+                case "Ceq":
+                    return Instructions.Ceq.ParseInstruction(processor, type, instrXML);
+                case "Ldarg.0":
+                    return Instructions.Ldarg_0.ParseInstruction(processor, type, instrXML);
+                case "Ldc.I4":
+                    return Instructions.Ldc_I4.ParseInstruction(processor, type, instrXML);
+                case "Ldfld":
+                    return Instructions.Ldfld.ParseInstruction(processor, type, instrXML);
+                case "Ldloc.0":
+                    return Instructions.Ldloc_0.ParseInstruction(processor, type, instrXML);
+                case "Ldloc.S":
+                    return Instructions.Ldloc_S.ParseInstruction(processor, type, instrXML);
+                case "Ldnull":
+                    return Instructions.Ldnull.ParseInstruction(processor, type, instrXML);
+                case "Ret":
+                    return Instructions.Ret.ParseInstruction(processor, type, instrXML);
+                case "Stloc.0":
+                    return Instructions.Stloc_0.ParseInstruction(processor, type, instrXML);
+                case "Stloc.S":
+                    return Instructions.Stloc_S.ParseInstruction(processor, type, instrXML);
                 default:
+                    Console.WriteLine("Unable to locate OpCode {0}!", opCode);
                     return null;
             }
         }
