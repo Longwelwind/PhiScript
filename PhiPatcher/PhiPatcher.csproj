@@ -65,19 +65,23 @@
   <ItemGroup>
     <Compile Include="Extensions.cs" />
     <Compile Include="InstructionBuilder.cs" />
+    <Compile Include="Instructions\Add.cs" />
     <Compile Include="Instructions\Brfalse_S.cs" />
     <Compile Include="Instructions\Brtrue_S.cs" />
     <Compile Include="Instructions\Call.cs" />
     <Compile Include="Instructions\Ceq.cs" />
+    <Compile Include="Instructions\Div.cs" />
     <Compile Include="Instructions\Ldarg_0.cs" />
     <Compile Include="Instructions\Ldc_I4.cs" />
     <Compile Include="Instructions\Ldfld.cs" />
     <Compile Include="Instructions\Ldloc_0.cs" />
     <Compile Include="Instructions\Ldloc_S.cs" />
     <Compile Include="Instructions\Ldnull.cs" />
+    <Compile Include="Instructions\Mul.cs" />
     <Compile Include="Instructions\Ret.cs" />
     <Compile Include="Instructions\Stloc_0.cs" />
     <Compile Include="Instructions\Stloc_S.cs" />
+    <Compile Include="Instructions\Sub.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
