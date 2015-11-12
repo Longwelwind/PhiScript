@@ -1,0 +1,3 @@
+[submodule "Cecil"]
+	path = Cecil
+	url = https://github.com/jbevain/cecil.git

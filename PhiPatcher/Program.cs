@@ -1,76 +1,85 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Xml;
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
-using MethodBody = Mono.Cecil.Cil.MethodBody;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Xml.Linq;
+using MethodBody = Mono.Cecil.Cil.MethodBody;
 
 namespace PhiPatcher
 {
-    class Program
+    internal class Program
     {
-        private string ModificationsXmlPath = "PhiPatcher.Modifications.xml";
+        private const string ModificationsXmlPath = "PhiPatcher.Modifications.xml";
 
-        private string AssemblyPath = "Assembly-CSharp.dll";
-        private string MovedAssemblyPath = "Assembly-CSharp.original.dll";
+        private const string AssemblyPath = "Assembly-CSharp.dll";
+        private const string MovedAssemblyPath = "Assembly-CSharp.original.dll";
 
-        private Dictionary<string, AssemblyDefinition> _loadedAssemblies = new Dictionary<string, AssemblyDefinition>();
+        private static Dictionary<string, AssemblyDefinition> mLoadedAssemblies = new Dictionary<string, AssemblyDefinition>();
 
-        private bool _alreadyPatched;
+        private bool mAlreadyPatched;
 
-        private XmlDocument _modificationsXml;
-
-        private AssemblyDefinition _cSharpAssembly;
-        private ModuleDefinition _cSharpModule;
+        private XElement mModifications;
 
         public void Run()
         {
             /**
              * We check if the assembly has already been patched
              */
-            _alreadyPatched = File.Exists(MovedAssemblyPath);
 
-            if (_alreadyPatched)
+            mAlreadyPatched = File.Exists(MovedAssemblyPath);
+
+            if (mAlreadyPatched)
             {
                 Console.WriteLine(MovedAssemblyPath + " already present");
                 Console.WriteLine("Using the backed-up " + MovedAssemblyPath);
             }
 
             /**
-             * We load the target assembly
+             * We load necessary assemblies
              */
-            string assemblyPath = _alreadyPatched ? MovedAssemblyPath : AssemblyPath;
-            _cSharpAssembly = GetAssembly(assemblyPath);
+            string assemblyPath = mAlreadyPatched ? MovedAssemblyPath : AssemblyPath;
 
-            if (_cSharpAssembly == null)
+            var cSharpAssembly = LoadAssembly(assemblyPath);
+            var phiScript = LoadAssembly("PhiScript.dll");
+
+            if (cSharpAssembly == null || phiScript == null)
             {
+                Console.Read();
                 return;
             }
 
-            _cSharpModule = _cSharpAssembly.MainModule;
-            
+            var coreLibrary =
+                cSharpAssembly.MainModule.AssemblyResolver.Resolve(
+                    (AssemblyNameReference)cSharpAssembly.MainModule.TypeSystem.CoreLibrary);
+
+            mLoadedAssemblies.Add("Assembly-CSharp", cSharpAssembly);
+            mLoadedAssemblies.Add("PhiScript", phiScript);
+            mLoadedAssemblies.Add("CoreLibrary", coreLibrary);
+
             /**
              * We launch the patching
              */
-            _modificationsXml = LoadModifications(ModificationsXmlPath);
-            
+            mModifications = LoadModifications(ModificationsXmlPath);
+
             PatchModifications();
 
             /**
              * We save or rename everything
              */
             // We rename the original dll
-            if (!_alreadyPatched)
+            if (!mAlreadyPatched)
             {
                 File.Move(AssemblyPath, MovedAssemblyPath);
             }
 
             Console.WriteLine("Writing the new Assembly in " + AssemblyPath);
 
-            _cSharpAssembly.Write(AssemblyPath);
+            GetAssembly("Assembly-CSharp").Write(AssemblyPath);
 
             Console.WriteLine("Finished Writing");
 
@@ -78,30 +87,27 @@ namespace PhiPatcher
             Console.Read();
         }
 
-        public AssemblyDefinition GetAssembly(string name)
+        public static AssemblyDefinition GetAssembly(string name)
         {
-            if (_loadedAssemblies.ContainsKey(name))
+            if (mLoadedAssemblies.ContainsKey(name))
             {
-                return _loadedAssemblies[name];
+                return mLoadedAssemblies[name];
             }
-            else
-            {
-                AssemblyDefinition assembly = LoadAssembly(name);
+            AssemblyDefinition assembly = LoadAssembly(name);
 
-                if (assembly != null)
-                {
-                    _loadedAssemblies.Add(name, assembly);
-                    return assembly;
-                }
-                else
-                {
-                    return null;
-                }
+            if (assembly != null)
+            {
+                mLoadedAssemblies.Add(name, assembly);
+                return assembly;
             }
+            return null;
         }
 
-        public AssemblyDefinition LoadAssembly(string path)
+        public static AssemblyDefinition LoadAssembly(string path)
         {
+            if (!path.EndsWith(".dll"))
+                path += ".dll";
+
             if (File.Exists(path))
             {
                 try
@@ -126,13 +132,11 @@ namespace PhiPatcher
 
         public void PatchModifications()
         {
-            XmlNode modifsNode = _modificationsXml.SelectSingleNode("Modifications");
-
-            foreach (XmlNode classNode in modifsNode.ChildNodes)
+            foreach (XElement classNode in mModifications.Elements("Class"))
             {
                 // We load the class in which the modifications will take place
-                string nameTypeToPatch = classNode.Attributes["Name"].Value;
-                TypeDefinition typeToPatch = _cSharpModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
+                string nameTypeToPatch = classNode.Attribute("Name").Value;
+                TypeDefinition typeToPatch = GetAssembly("Assembly-CSharp").MainModule.Types.FirstOrDefault(t => t.Name == nameTypeToPatch);
 
                 if (typeToPatch == null)
                 {
@@ -140,9 +144,9 @@ namespace PhiPatcher
                     continue;
                 }
 
-                foreach (XmlNode methodNode in classNode.ChildNodes)
+                foreach (XElement methodNode in classNode.Elements("Method"))
                 {
-                    string nameMethodTopatch = methodNode.Attributes["Name"].Value;
+                    string nameMethodTopatch = methodNode.Attribute("Name").Value;
                     MethodDefinition methodToPatch = typeToPatch.Methods.FirstOrDefault(m => m.Name == nameMethodTopatch);
 
                     if (methodToPatch == null)
@@ -160,40 +164,64 @@ namespace PhiPatcher
                     int indexBegin = methodToPatch.Body.Instructions.Count - 1;
 
                     // If the user specified a location, we begin there
-                    if (methodNode.Attributes["Location"] != null)
+                    if (methodNode.Attribute("Location") != null)
                     {
-                        indexBegin = Int32.Parse(methodNode.Attributes["Location"].Value);
+                        indexBegin = int.Parse(methodNode.Attribute("Location").Value);
                     }
 
                     // If the user specified a count of instructions to delete,
                     // we delete them
-                    if (methodNode.Attributes["DeleteCount"] != null)
+                    if (methodNode.Attribute("DeleteCount") != null)
                     {
-                        int countInstrToDelete = Int32.Parse(methodNode.Attributes["DeleteCount"].Value);
+                        int countInstrToDelete = int.Parse(methodNode.Attribute("DeleteCount").Value);
 
-                        for (int i = 0;i < countInstrToDelete;i++)
+                        for (int i = 0; i < countInstrToDelete; i++)
                         {
                             processor.Remove(methodToPatch.Body.Instructions.ElementAt(indexBegin));
                         }
                     }
 
-                    if (methodNode.Attributes["TempVariable"] != null)
-                    {
-                        // TODO: Make it work
-                        continue;
-
-                        string tempVariable = methodNode.Attributes["TempVariable"].Value;
-
-                        methodBody.Variables.Add(new VariableDefinition(_cSharpModule.Import(Type.GetType(tempVariable))));
-                    }
-
-
                     Instruction locationInstr = methodToPatch.Body.Instructions.ElementAt(indexBegin);
                     Instruction prevInstr = locationInstr.Previous;
 
-                    foreach (XmlNode instrNode in methodNode.ChildNodes)
+                    foreach (XElement variableNode in methodNode.Elements("Variable"))
                     {
-                        Instruction instr = ParseInstruction(processor, methodBody, typeToPatch, instrNode, locationInstr);
+                        string variableName = variableNode.Attribute("Name").Value;
+                        string variableType = variableNode.Attribute("Type").Value;
+                        string assemblyName = variableNode.Attribute("Assembly").Value;
+
+                        AssemblyDefinition assembly = GetAssembly(assemblyName);
+                        TypeDefinition typeDefinition = assembly.MainModule.GetType(variableType);
+                        TypeReference typeReference = GetAssembly("Assembly-CSharp").MainModule.ImportReference(typeDefinition);
+
+                        if (variableNode.HasElements)
+                        {
+                            List<TypeReference> genericParameters = new List<TypeReference>();
+
+                            foreach (XElement genericParameter in variableNode.Elements("GenericParameter"))
+                            {
+                                var gPAssemblyName = genericParameter.Attribute("Assembly").Value;
+                                var gPType = genericParameter.Attribute("Type").Value;
+
+                                AssemblyDefinition gPAssembly = GetAssembly(gPAssemblyName);
+                                TypeDefinition gPTypeDefinition = gPAssembly.MainModule.GetType(gPType);
+                                TypeReference gPTypeReference =
+                                    GetAssembly("Assembly-CSharp").MainModule.ImportReference(gPTypeDefinition);
+
+                                genericParameters.Add(gPTypeReference);
+                            }
+
+                            typeReference = typeReference.MakeGenericInstanceType(genericParameters.ToArray());
+                        }
+
+                        VariableDefinition variableDefinition = new VariableDefinition(variableName, typeReference);
+
+                        methodBody.Variables.Add(variableDefinition);
+                    }
+
+                    foreach (XElement instrNode in methodNode.Elements("Instruction"))
+                    {
+                        Instruction instr = InstructionBuilder.Build(processor, typeToPatch, instrNode);
 
                         if (instr == null)
                         {
@@ -208,151 +236,23 @@ namespace PhiPatcher
                         prevInstr = instr;
                     }
 
-					// Optimize the method
-					methodToPatch.Body.OptimizeMacros();
+                    // Optimize the method
+                    methodToPatch.Body.OptimizeMacros();
                 }
             }
         }
 
-        public Instruction ParseInstruction(ILProcessor processor, MethodBody methodBody, TypeDefinition type, XmlNode instrXml, Instruction locationInstr)
-        {
-            Instruction instr = null;
-
-            string nameOpCode = instrXml.Attributes["OpCode"].Value;
-
-            if (nameOpCode == "Call")
-            {
-                string assemblyName = instrXml.Attributes["Assembly"].Value;
-                string classToAddName = instrXml.Attributes["Class"].Value;
-                string methodToAddName = instrXml.Attributes["Method"].Value;
-
-                
-
-                // We search in which assembly should we pull the method
-                AssemblyDefinition assembly = GetAssembly(assemblyName + ".dll");
-
-                if (assembly == null)
-                {
-                    return null;
-                }
-
-                ModuleDefinition module = assembly.MainModule;
-
-                TypeDefinition typeToAdd = module.Types.FirstOrDefault(t => t.Name == classToAddName);
-
-                if (typeToAdd == null)
-                {
-                    Console.WriteLine("Couldn't find type/class named " + classToAddName);
-                    return null;
-                }
-
-                MethodDefinition methodToAdd = typeToAdd.Methods.FirstOrDefault(m => m.Name == methodToAddName);
-
-                if (methodToAdd == null)
-                {
-                    Console.WriteLine("Couldn't find method named " + methodToAddName);
-                    return null;
-                }
-
-                MethodReference methodToAddImported = _cSharpAssembly.MainModule.Import(methodToAdd);
-
-                instr = processor.Create(OpCodes.Call, methodToAddImported);
-            }
-            else if (nameOpCode == "Ldc.I4")
-            {
-                int value = Int32.Parse(instrXml.Attributes["Value"].Value);
-                instr = processor.Create(OpCodes.Ldc_I4, value);
-            }
-            else if (nameOpCode == "Ldfld")
-            {
-                string fieldName = instrXml.Attributes["Field"].Value;
-                FieldDefinition field = type.Fields.FirstOrDefault(f => f.Name == fieldName);
-
-                if (field == null)
-                {
-                    Console.WriteLine("Couldn't find field named " + fieldName);
-                }
-
-                instr = processor.Create(OpCodes.Ldfld, field);
-            }
-            else if (nameOpCode == "Ldarg_0")
-            {
-                instr = processor.Create(OpCodes.Ldarg_0);
-            }
-            else if (nameOpCode == "Stloc_0")
-            {
-                instr = processor.Create(OpCodes.Stloc_0);
-            }
-            else if (nameOpCode == "Ldloc_0")
-            {
-                instr = processor.Create(OpCodes.Ldloc_0);
-            }
-            else if (nameOpCode == "Stloc_S")
-            {
-                int value = Int32.Parse(instrXml.Attributes["Value"].Value);
-                instr = processor.Create(OpCodes.Stloc_S, methodBody.Variables[value]);
-            }
-            else if (nameOpCode == "Ldloc_S")
-            {
-                int value = Int32.Parse(instrXml.Attributes["Value"].Value);
-                instr = processor.Create(OpCodes.Ldloc_S, methodBody.Variables[value]);
-            }
-            else if (nameOpCode == "Brtrue_S")
-            {
-                Instruction target = locationInstr;
-                if (instrXml.Attributes["Value"] != null)
-                {
-                    
-                }
-
-                instr = processor.Create(OpCodes.Brtrue_S, target);
-            }
-            else if (nameOpCode == "Brfalse_S")
-            {
-                Instruction target = locationInstr;
-                if (instrXml.Attributes["Value"] != null)
-                {
-
-                }
-
-                instr = processor.Create(OpCodes.Brfalse_S, target);
-            }
-            else if (nameOpCode == "Ret")
-            {
-                instr = processor.Create(OpCodes.Ret);
-            }
-            else if (nameOpCode == "Ldnull")
-            {
-                instr = processor.Create(OpCodes.Ldnull);
-            }
-            else if (nameOpCode == "Ceq")
-            {
-                instr = processor.Create(OpCodes.Ceq);
-            }
-            else
-            {
-                Console.WriteLine("Couldn't find OpCode named " + nameOpCode);
-            }
-
-            return instr;
-        }
-
-        public XmlDocument LoadModifications(string path)
+        public XElement LoadModifications(string path)
         {
             /**
              * We load the file containing the modifications to patch
              * in the assembly
              */
-            var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(path);
-            StreamReader reader = new StreamReader(stream);
-
-            XmlDocument modif = new XmlDocument();
-            modif.LoadXml(reader.ReadToEnd());
-
-            return modif;
+            Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(path);
+            return XElement.Load(stream);
         }
 
-        static void Main()
+        private static void Main()
         {
             Program program = new Program();
 
