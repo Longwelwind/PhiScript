@@ -1,5 +1,5 @@
 # PhiScript
-PhiScript is a mod loader and a library for developping
+PhiScript is a mod loader and a library for developping mods for Planetbase.
 
 ## Projects
 ### PhiPatcher
