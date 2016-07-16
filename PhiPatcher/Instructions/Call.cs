@@ -26,7 +26,7 @@ namespace PhiPatcher.Instructions
             // Get Method
             MethodDefinition methodDefinition = typeDefinition.Methods.Single(m => m.Name == methodName);
             MethodReference methodReference =
-                Program.GetAssembly("Assembly-CSharp").MainModule.ImportReference(methodDefinition);
+                Program.GetAssembly("Assembly-CSharp").MainModule.Import(methodDefinition);
 
             // Generic Parameter Check
             if (instrXML.HasElements)
@@ -41,7 +41,7 @@ namespace PhiPatcher.Instructions
                     AssemblyDefinition gPAssembly = Program.GetAssembly(gPAssemblyName);
                     TypeDefinition gPTypeDefinition = gPAssembly.MainModule.GetType(gPType);
                     TypeReference gPTypeReference =
-                        Program.GetAssembly("Assembly-CSharp").MainModule.ImportReference(gPTypeDefinition);
+                        Program.GetAssembly("Assembly-CSharp").MainModule.Import(gPTypeDefinition);
 
                     genericParameters.Add(gPTypeReference);
                 }

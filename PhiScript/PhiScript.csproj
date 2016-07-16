@@ -30,13 +30,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Event\ConstructionComponent\CanProduceEvent.cs" />
-    <Compile Include="Event\ConstructionComponent\CompleteProductionEvent.cs" />
-    <Compile Include="Event\ConstructionComponent\NeededResourcesEvent.cs" />
-    <Compile Include="Event\EventGui.cs" />
-    <Compile Include="Manager\ConstructionComponentManager.cs" />
-    <Compile Include="Manager\GuiManager.cs" />
-    <Compile Include="Manager\ModuleManager.cs" />
     <Compile Include="Phi.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

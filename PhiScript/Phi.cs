@@ -1,6 +1,4 @@
-﻿using PhiScript.Manager;
-using Planetbase;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,9 +11,6 @@ namespace PhiScript
         public static Phi Instance;
 
         public List<Mod> Mods = new List<Mod>();
-        public ConstructionComponentManager ConstructionComponentManager;
-        public GuiManager GuiManager;
-        public ModuleManager ModuleManager;
 
         /// <summary>
         /// Raised the game processes a tick, even outside of the game (i.e. in menu).
@@ -24,23 +19,6 @@ namespace PhiScript
 
         public Phi()
         {
-            ConstructionComponentManager = new ConstructionComponentManager();
-            GuiManager = new GuiManager();
-            ModuleManager = new ModuleManager();
-        }
-
-        /// <summary>
-        /// Returns the currently selected object (human, module, ...)
-        /// </summary>
-        /// <returns></returns>
-        public Selectable GetSelection()
-        {
-            return GetPrivateStaticField<Selectable>(typeof(Selection), "mSelected");
-        }
-
-        public GameManager GetGameManager()
-        {
-            return GetPrivateStaticField<GameManager>(typeof(GameManager), "mInstance");
         }
 
         public static T GetPrivateField<T>(object obj, string field)
@@ -58,34 +36,11 @@ namespace PhiScript
             return (T) type.GetField(field, BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
         }
 
-        public List<ResourceType> GetResourceTypes()
-        {
-            return ResourceTypeList.get();
-        }
-
-        public List<ComponentType> GetComponentTypes()
-        {
-            return ComponentTypeList.get();
-        }
-
-        public void AddResourceType(ResourceType resourceType)
-        {
-            ResourceTypeList resourceTypeList = ResourceTypeList.getInstance();
-            MethodInfo method = resourceTypeList.GetType().GetMethod("addResource", BindingFlags.NonPublic | BindingFlags.Instance);
-
-            method.Invoke(resourceTypeList, new object[] { resourceType });
-        }
-
-        public void AddComponentType(ComponentType componentType)
-        {
-            ComponentTypeList componentTypeList = ComponentTypeList.getInstance();
-            MethodInfo method = componentTypeList.GetType().GetMethod("add", BindingFlags.NonPublic | BindingFlags.Instance);
-
-            method.Invoke(componentTypeList, new object[] { componentType });
-        }
-
         public void Launch()
         {
+            Console.Write("test");
+            return;
+
             var modsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\Planetbase\\PhiMods";
             if (!Directory.Exists(modsFolder))
             {
@@ -126,7 +81,6 @@ namespace PhiScript
         public static void StaticLaunch()
         {
             Instance = new Phi();
-
             Instance.Launch();
         }
     }

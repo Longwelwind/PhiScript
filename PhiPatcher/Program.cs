@@ -55,7 +55,7 @@ namespace PhiPatcher
 
             var coreLibrary =
                 cSharpAssembly.MainModule.AssemblyResolver.Resolve(
-                    (AssemblyNameReference)cSharpAssembly.MainModule.TypeSystem.CoreLibrary);
+                    (AssemblyNameReference)cSharpAssembly.MainModule.TypeSystem.Corlib);
 
             mLoadedAssemblies.Add("Assembly-CSharp", cSharpAssembly);
             mLoadedAssemblies.Add("PhiScript", phiScript);
@@ -163,7 +163,7 @@ namespace PhiPatcher
                     // (i.e. before the last instruction)
                     int indexBegin = methodToPatch.Body.Instructions.Count - 1;
 
-                    // If the user specified a location, we begin there
+                    // But, if the user specified a location, we place the modification there
                     if (methodNode.Attribute("Location") != null)
                     {
                         indexBegin = int.Parse(methodNode.Attribute("Location").Value);
@@ -183,41 +183,6 @@ namespace PhiPatcher
 
                     Instruction locationInstr = methodToPatch.Body.Instructions.ElementAt(indexBegin);
                     Instruction prevInstr = locationInstr.Previous;
-
-                    foreach (XElement variableNode in methodNode.Elements("Variable"))
-                    {
-                        string variableName = variableNode.Attribute("Name").Value;
-                        string variableType = variableNode.Attribute("Type").Value;
-                        string assemblyName = variableNode.Attribute("Assembly").Value;
-
-                        AssemblyDefinition assembly = GetAssembly(assemblyName);
-                        TypeDefinition typeDefinition = assembly.MainModule.GetType(variableType);
-                        TypeReference typeReference = GetAssembly("Assembly-CSharp").MainModule.ImportReference(typeDefinition);
-
-                        if (variableNode.HasElements)
-                        {
-                            List<TypeReference> genericParameters = new List<TypeReference>();
-
-                            foreach (XElement genericParameter in variableNode.Elements("GenericParameter"))
-                            {
-                                var gPAssemblyName = genericParameter.Attribute("Assembly").Value;
-                                var gPType = genericParameter.Attribute("Type").Value;
-
-                                AssemblyDefinition gPAssembly = GetAssembly(gPAssemblyName);
-                                TypeDefinition gPTypeDefinition = gPAssembly.MainModule.GetType(gPType);
-                                TypeReference gPTypeReference =
-                                    GetAssembly("Assembly-CSharp").MainModule.ImportReference(gPTypeDefinition);
-
-                                genericParameters.Add(gPTypeReference);
-                            }
-
-                            typeReference = typeReference.MakeGenericInstanceType(genericParameters.ToArray());
-                        }
-
-                        VariableDefinition variableDefinition = new VariableDefinition(variableName, typeReference);
-
-                        methodBody.Variables.Add(variableDefinition);
-                    }
 
                     foreach (XElement instrNode in methodNode.Elements("Instruction"))
                     {
